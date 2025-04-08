@@ -1,0 +1,72 @@
+@startuml C4_Agentic_Container
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+title "Keep AIOps Platform - Agentic Integration Container Diagram"
+
+Person(sre, "SRE / DevOps Engineer", "Manages incidents and configures automated responses")
+
+System_Boundary(keep, "Keep AIOps Platform") {
+    Container(keep_ui, "Keep UI", "Next.js, React", "Web interface for incident management and workflow configuration")
+    
+    Container_Boundary(keep_core, "Keep Core") {
+        Container(api_server, "API Server", "FastAPI", "REST API endpoints for platform functionality")
+        Container(workflow_engine, "Workflow Engine", "Python", "Executes workflows based on triggers and conditions")
+        Container(rule_engine, "Rule Engine", "Python", "Correlates alerts into incidents using defined rules")
+        Container(provider_system, "Provider System", "Python", "Integration with external services")
+    }
+    
+    Container_Boundary(keep_agentic, "Keep Agentic System") {
+        Container(agent_provider, "Agent Provider", "Python", "Provider implementation for LangGraph-based agents")
+        Container(agent_workflow, "Agent Workflow Engine", "LangGraph", "Manages agent states and execution flows")
+        Container(tool_registry, "Tool Registry", "Python", "Exposes provider actions as agent tools")
+        Container(agent_memory, "Agent Memory Store", "SQLModel", "Persistent storage for agent observations and reasoning")
+        Container(feedback_system, "Human Feedback System", "Python", "Collects and processes feedback on agent actions")
+    }
+    
+    ContainerDb(database, "Database", "PostgreSQL", "Stores alerts, incidents, workflows, and agent data")
+}
+
+System_Ext(monitoring_systems, "Monitoring Systems", "Alert sources")
+System_Ext(incident_systems, "Incident Management Systems", "Incident tracking")
+System_Ext(communication_systems, "Communication Systems", "Notifications")
+System_Ext(llm_providers, "LLM API Providers", "Foundation models")
+
+Rel(sre, keep_ui, "Uses", "HTTPS")
+Rel(keep_ui, api_server, "Calls API", "JSON/HTTPS")
+
+Rel_Down(api_server, workflow_engine, "Triggers workflows")
+Rel_Down(api_server, rule_engine, "Creates/updates incidents")
+Rel_Down(api_server, provider_system, "Configures providers")
+Rel_Down(api_server, agent_provider, "Configures agents")
+
+Rel_Right(workflow_engine, provider_system, "Executes provider actions")
+Rel_Left(rule_engine, provider_system, "Uses providers for enrichment")
+
+Rel_Right(workflow_engine, agent_provider, "Delegates tasks to agents")
+Rel_Left(rule_engine, agent_provider, "Uses agents for incident classification")
+
+Rel_Down(agent_provider, agent_workflow, "Creates and executes")
+Rel_Down(agent_provider, tool_registry, "Retrieves tools")
+Rel_Down(agent_provider, agent_memory, "Stores/retrieves memory")
+Rel_Right(agent_provider, feedback_system, "Collects feedback")
+
+Rel_Down(agent_workflow, tool_registry, "Uses tools")
+Rel_Down(agent_workflow, agent_memory, "Reads/writes memory")
+
+Rel_Down(api_server, database, "Reads/writes data")
+Rel_Down(workflow_engine, database, "Reads/writes data")
+Rel_Down(rule_engine, database, "Reads/writes data")
+Rel_Down(provider_system, database, "Reads/writes data")
+Rel_Down(agent_memory, database, "Persists memory")
+Rel_Down(feedback_system, database, "Stores feedback")
+
+Rel_Up(monitoring_systems, api_server, "Sends alerts", "Webhooks")
+Rel_Down(provider_system, incident_systems, "Creates incidents", "API")
+Rel_Down(provider_system, communication_systems, "Sends notifications", "API")
+Rel_Right(agent_workflow, llm_providers, "Sends prompts / Receives completions", "API")
+
+@enduml 

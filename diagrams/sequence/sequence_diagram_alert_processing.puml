@@ -1,0 +1,85 @@
+@startuml Alert_Processing
+title Alert Processing Flow - Keep AIOps Platform
+
+actor "External System" as External
+participant "API Routes" as API
+participant "Alert Service" as AlertService
+participant "Alert Deduplicator" as Deduplicator
+participant "Rules Engine" as RulesEngine
+participant "Incident Service" as IncidentService
+participant "Workflow Manager" as WorkflowManager
+database "Database" as DB
+
+External -> API: POST /api/v1/alerts
+activate API
+
+API -> AlertService: process_alert(alert_data)
+activate AlertService
+
+AlertService -> Deduplicator: deduplicate_alert(alert)
+activate Deduplicator
+Deduplicator -> DB: query for existing alerts
+Deduplicator <-- DB: alert_exists: boolean
+AlertService <-- Deduplicator: deduplicated_alert
+deactivate Deduplicator
+
+alt is new alert or updated
+    AlertService -> DB: store_alert(alert)
+    AlertService <-- DB: alert_id
+    
+    AlertService -> RulesEngine: evaluate_rules(alert)
+    activate RulesEngine
+    RulesEngine -> DB: get_rules(tenant_id)
+    RulesEngine <-- DB: rules_list
+    
+    loop for each rule
+        RulesEngine -> RulesEngine: check_if_rule_apply(rule, alert)
+        
+        alt rule applies
+            RulesEngine -> DB: get_or_create_incident(rule, fingerprint)
+            RulesEngine <-- DB: incident
+            
+            RulesEngine -> DB: assign_alert_to_incident(alert, incident)
+            RulesEngine <-- DB: updated_incident
+        end
+    end
+    
+    AlertService <-- RulesEngine: matched_incidents
+    deactivate RulesEngine
+    
+    alt matched incidents exists
+        AlertService -> IncidentService: handle_incidents(matched_incidents)
+        activate IncidentService
+        
+        IncidentService -> DB: update_incident_status(incident)
+        IncidentService <-- DB: updated_incident
+        
+        loop for each incident with workflow trigger
+            IncidentService -> WorkflowManager: trigger_workflow(incident, "updated")
+            activate WorkflowManager
+            
+            WorkflowManager -> DB: get_workflows(trigger_type, incident)
+            WorkflowManager <-- DB: workflows
+            
+            loop for each workflow
+                WorkflowManager -> WorkflowManager: execute_workflow(workflow)
+            end
+            
+            IncidentService <-- WorkflowManager: execution_results
+            deactivate WorkflowManager
+        end
+        
+        AlertService <-- IncidentService: incidents_result
+        deactivate IncidentService
+    end
+else is duplicate
+    AlertService -> AlertService: log_duplicate(alert)
+end
+
+API <-- AlertService: process_result
+deactivate AlertService
+
+External <-- API: HTTP Response
+deactivate API
+
+@enduml 

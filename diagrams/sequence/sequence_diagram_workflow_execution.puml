@@ -1,0 +1,97 @@
+@startuml Workflow_Execution
+title Workflow Execution Flow - Keep AIOps Platform
+
+participant "Workflow Manager" as WorkflowManager
+participant "Context Manager" as ContextManager
+participant "Workflow" as Workflow
+participant "Step" as Step
+participant "Provider Factory" as ProviderFactory
+participant "Provider Instance" as Provider
+database "Database" as DB
+
+-> WorkflowManager: execute_workflow(workflow_id, event)
+activate WorkflowManager
+
+WorkflowManager -> DB: get_workflow(workflow_id)
+WorkflowManager <-- DB: workflow_definition
+
+WorkflowManager -> ContextManager: create(tenant_id, workflow_id)
+activate ContextManager
+WorkflowManager <-- ContextManager: context
+deactivate ContextManager
+
+WorkflowManager -> ContextManager: set_event_context(event)
+activate ContextManager
+WorkflowManager <-- ContextManager: updated_context
+deactivate ContextManager
+
+WorkflowManager -> Workflow: new Workflow(context, workflow_definition)
+activate Workflow
+
+Workflow -> ContextManager: set_consts_context(workflow_consts)
+Workflow -> ContextManager: set_secret_context()
+
+WorkflowManager -> Workflow: run(execution_id)
+activate Workflow
+
+Workflow -> ContextManager: set_execution_context(workflow_id, execution_id)
+
+loop for each step in workflow_steps
+    Workflow -> Step: run()
+    activate Step
+    
+    alt requires provider
+        Step -> ProviderFactory: get_provider(provider_id)
+        activate ProviderFactory
+        ProviderFactory -> Provider: create(provider_config)
+        Step <-- ProviderFactory: provider
+        deactivate ProviderFactory
+        
+        Step -> Provider: method_call(parameters)
+        Step <-- Provider: result
+    end
+    
+    Step -> ContextManager: update_context(result)
+    Step <-- ContextManager: updated_context
+    
+    Workflow <-- Step: step_result
+    deactivate Step
+    
+    alt step_result is false and !continue_to_next_step
+        break
+    end
+end
+
+loop for each action in workflow_actions
+    Workflow -> Step: run()
+    activate Step
+    
+    alt requires provider
+        Step -> ProviderFactory: get_provider(provider_id)
+        activate ProviderFactory
+        ProviderFactory -> Provider: create(provider_config)
+        Step <-- ProviderFactory: provider
+        deactivate ProviderFactory
+        
+        Step -> Provider: method_call(parameters)
+        Step <-- Provider: result
+    end
+    
+    Workflow <-- Step: action_result
+    deactivate Step
+    
+    alt action_result is true and !continue_to_next_step
+        break
+    end
+end
+
+WorkflowManager <-- Workflow: execution_result
+deactivate Workflow
+
+WorkflowManager -> DB: store_execution_result(workflow_id, execution_id, result)
+WorkflowManager <-- DB: success
+
+<-- WorkflowManager: execution_result
+deactivate WorkflowManager
+
+@enduml 

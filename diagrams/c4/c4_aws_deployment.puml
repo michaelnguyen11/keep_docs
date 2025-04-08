@@ -1,0 +1,113 @@
+@startuml C4_AWS_Deployment
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Deployment Diagram for Keep AIOps Platform on AWS
+
+Deployment_Node(aws, "Amazon Web Services", "Cloud Platform") {
+    Boundary(vpc, "VPC", "Virtual Private Cloud") {
+        Deployment_Node(eks, "Amazon EKS", "Kubernetes Cluster") {
+            Boundary(k8s_ns, "keep-namespace", "Kubernetes Namespace") {
+                Deployment_Node(ui_cluster, "Frontend Deployment", "Web UI") {
+                    Container(ui_pod, "Keep UI", "NextJS, React", "Web interface for Keep AIOps platform")
+                }
+                
+                Deployment_Node(api_cluster, "API Deployment", "API Server") {
+                    Container(api_pod, "Keep API", "Python, FastAPI", "Core backend services for Keep AIOps platform")
+                }
+                
+                Deployment_Node(websocket_cluster, "WebSocket Deployment", "WebSocket Server") {
+                    Container(websocket_pod, "WebSocket Server", "Soketi", "Real-time updates and notifications")
+                }
+                
+                Deployment_Node(worker_cluster, "Worker Deployment", "Background Tasks") {
+                    Container(worker_pod, "Background Task Processor", "ARQ", "Asynchronous task processing")
+                }
+                
+                Deployment_Node(redis_cluster, "Redis Deployment", "In-memory Data Store") {
+                    ContainerDb(redis, "Redis", "In-memory store", "Queue for background tasks and caching")
+                }
+            }
+        }
+        
+        Deployment_Node(rds, "Amazon RDS", "Managed Database") {
+            ContainerDb(postgres, "PostgreSQL", "Database", "Persistent storage for Keep data")
+        }
+        
+        Deployment_Node(elastic_cache, "Amazon ElastiCache", "Managed Redis") {
+            ContainerDb(redis_cache, "Redis Cache", "In-memory cache", "Session storage and caching")
+        }
+        
+        Deployment_Node(s3, "Amazon S3", "Object Storage") {
+            ContainerDb(assets_bucket, "Assets Bucket", "S3 Bucket", "Store static assets")
+            ContainerDb(backups_bucket, "Backups Bucket", "S3 Bucket", "Database backups")
+        }
+    }
+    
+    Deployment_Node(route53, "Amazon Route 53", "DNS") {
+        Container(dns, "DNS Records", "DNS", "Routing for keep.example.com")
+    }
+    
+    Deployment_Node(alb, "Application Load Balancer", "ALB") {
+        Container(load_balancer, "Load Balancer", "ALB", "Distributes traffic to Keep services")
+    }
+    
+    Deployment_Node(waf, "AWS WAF", "Web Application Firewall") {
+        Container(firewall, "WAF Rules", "Security", "Protects against common web exploits")
+    }
+    
+    Deployment_Node(secrets_manager, "AWS Secrets Manager", "Secrets") {
+        Container(secrets, "Secrets", "Secrets Manager", "Securely store provider credentials")
+    }
+    
+    Deployment_Node(cloudwatch, "Amazon CloudWatch", "Monitoring") {
+        Container(logs, "Logs", "CloudWatch Logs", "Centralized logs")
+        Container(metrics, "Metrics", "CloudWatch Metrics", "Performance metrics")
+        Container(alarms, "Alarms", "CloudWatch Alarms", "Alerts for infrastructure issues")
+    }
+    
+    Deployment_Node(cognito, "Amazon Cognito", "Authentication") {
+        Container(user_pool, "User Pool", "Cognito", "User authentication and authorization")
+    }
+}
+
+System_Ext(observability_tools, "Observability Tools", "Prometheus, Datadog, CloudWatch, etc.")
+System_Ext(ticketing_systems, "Ticketing Systems", "Jira, ServiceNow, etc.")
+System_Ext(communication_tools, "Communication Tools", "Slack, Email, etc.")
+System_Ext(ai_providers, "AI Providers", "OpenAI, Anthropic, etc.")
+
+Rel(alb, ui_cluster, "Routes requests to", "HTTPS")
+Rel(alb, api_cluster, "Routes requests to", "HTTPS")
+Rel(alb, websocket_cluster, "Routes WebSocket connections to", "WSS")
+
+Rel(waf, alb, "Protects", "HTTPS")
+Rel(route53, alb, "Directs traffic to", "DNS")
+
+Rel(ui_pod, api_pod, "Makes API calls to", "HTTPS/JSON")
+Rel(ui_pod, websocket_pod, "Subscribes to events from", "WebSocket")
+
+Rel(api_pod, postgres, "Reads from and writes to", "SQL/TCP")
+Rel(api_pod, redis, "Uses for task queue", "Redis Protocol")
+Rel(api_pod, redis_cache, "Uses for caching", "Redis Protocol")
+Rel(api_pod, worker_pod, "Schedules tasks on", "Redis Queue")
+Rel(api_pod, websocket_pod, "Publishes events to", "Internal API")
+Rel(api_pod, secrets, "Retrieves secrets from", "HTTPS")
+Rel(api_pod, user_pool, "Authenticates users via", "OIDC")
+
+Rel(worker_pod, postgres, "Reads from and writes to", "SQL/TCP")
+Rel(worker_pod, redis, "Processes tasks from", "Redis Protocol")
+Rel(worker_pod, secrets, "Retrieves secrets from", "HTTPS")
+
+Rel(api_pod, logs, "Sends logs to", "CloudWatch API")
+Rel(api_pod, metrics, "Reports metrics to", "CloudWatch API")
+Rel(worker_pod, logs, "Sends logs to", "CloudWatch API")
+Rel(ui_pod, logs, "Sends logs to", "CloudWatch API")
+Rel(websocket_pod, logs, "Sends logs to", "CloudWatch API")
+
+Rel(observability_tools, api_pod, "Sends alerts to", "Webhooks/API")
+Rel(api_pod, ticketing_systems, "Creates and updates tickets in", "API")
+Rel(api_pod, communication_tools, "Sends notifications via", "API")
+Rel(api_pod, ai_providers, "Requests AI services from", "API")
+
+@enduml 

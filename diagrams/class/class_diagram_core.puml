@@ -1,0 +1,113 @@
+@startuml Core_Domain_Model
+title Core Domain Model - Keep AIOps Platform
+
+skinparam classAttributeIconSize 0
+
+class Alert {
+  +id: UUID
+  +tenant_id: str
+  +timestamp: datetime
+  +provider_type: str
+  +provider_id: str
+  +event: dict
+  +fingerprint: str
+  +alert_hash: str
+}
+
+class Incident {
+  +id: UUID
+  +tenant_id: str
+  +running_number: int
+  +user_generated_name: str
+  +ai_generated_name: str
+  +user_summary: str
+  +generated_summary: str
+  +assignee: str
+  +severity: int
+  +status: str
+  +creation_time: datetime
+  +start_time: datetime
+  +end_time: datetime
+  +last_seen_time: datetime
+  +alerts_count: int
+  +affected_services: list
+  +sources: list
+  +rule_id: UUID
+  +rule_fingerprint: str
+  +fingerprint: str
+  +incident_type: str
+  +resolve_on: str
+}
+
+class Rule {
+  +id: UUID
+  +tenant_id: str
+  +name: str
+  +description: str
+  +definition_cel: str
+  +require_approve: bool
+  +create_on: str
+  +resolve_on: str
+  +grouping_criteria: list
+  +enabled: bool
+  +created_at: datetime
+  +created_by: str
+  +last_updated: datetime
+  +last_updated_by: str
+}
+
+class AlertToIncident {
+  +tenant_id: str
+  +timestamp: datetime
+  +alert_id: UUID
+  +incident_id: UUID
+  +is_created_by_ai: bool
+}
+
+class AlertEnrichment {
+  +id: UUID
+  +tenant_id: str
+  +timestamp: datetime
+  +alert_fingerprint: str
+  +enrichments: dict
+}
+
+class Workflow {
+  +workflow_id: str
+  +workflow_name: str
+  +workflow_owners: list
+  +workflow_tags: list
+  +workflow_interval: int
+  +workflow_triggers: list
+  +workflow_steps: list
+  +workflow_actions: list
+  +workflow_description: str
+  +workflow_disabled: bool
+  +workflow_providers: list
+  +workflow_strategy: enum
+  +workflow_consts: dict
+  +workflow_debug: bool
+  +workflow_permissions: list
+  +run_steps()
+  +run_action()
+  +run_actions()
+  +run()
+}
+
+class Provider {
+  +provider_id: str
+  +display_name: str
+  +provider_category: list
+  +config: ProviderConfig
+  +authentication_config
+  +validate_config()
+  +validate_scopes()
+  +query()
+}
+
+Alert "many" -- "many" Incident : assigned to >
+Alert "1" -- "0..1" AlertEnrichment : enriched by >
+Incident "many" -- "0..1" Rule : created by >
+Provider "many" -- "many" Workflow : used by >
+
+@enduml 
