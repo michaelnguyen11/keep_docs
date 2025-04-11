@@ -1,0 +1,179 @@
+@startuml Integration_Framework_Architecture
+
+title Keep AIOps Platform - Integration Framework Architecture
+
+!theme plain
+skinparam linetype ortho
+skinparam ComponentBackgroundColor WhiteSmoke
+skinparam ComponentBorderColor Black
+skinparam InterfaceBackgroundColor WhiteSmoke
+skinparam InterfaceBorderColor Black
+skinparam ArrowColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' External Systems
+package "External Monitoring Systems" {
+  [Prometheus] as Prometheus
+  [Grafana] as Grafana
+  [CloudWatch] as CloudWatch
+  [Datadog] as Datadog
+  [Zabbix] as Zabbix
+  [ElasticSearch] as ElasticSearch
+  [Custom System] as CustomSystem
+}
+
+' Keep AIOps Platform
+package "Keep AIOps Platform" {
+  ' API Layer
+  package "API Layer" {
+    [Webhook API] as WebhookAPI
+    [Provider API] as ProviderAPI
+    
+    interface "Generic\nWebhook" as GenericWebhook
+    interface "Provider\nSpecific\nWebhook" as ProviderWebhook
+    
+    WebhookAPI -- GenericWebhook
+    WebhookAPI -- ProviderWebhook
+  }
+  
+  ' Provider Framework
+  package "Provider Framework" {
+    [Providers Factory] as ProvidersFactory
+    [BaseProvider] as BaseProvider
+    [BaseTopologyProvider] as BaseTopologyProvider
+    [BaseIncidentProvider] as BaseIncidentProvider
+    
+    ProvidersFactory --> BaseProvider
+    BaseTopologyProvider --|> BaseProvider
+    BaseIncidentProvider --|> BaseProvider
+    
+    ' Provider Types
+    package "Provider Implementations" {
+      [PrometheusProvider] as PrometheusProvider
+      [GrafanaProvider] as GrafanaProvider
+      [CloudWatchProvider] as CloudWatchProvider
+      [DatadogProvider] as DatadogProvider
+      [ZabbixProvider] as ZabbixProvider
+      [ElasticProvider] as ElasticProvider
+      [WebhookProvider] as WebhookProvider
+      
+      PrometheusProvider --|> BaseProvider
+      GrafanaProvider --|> BaseProvider
+      CloudWatchProvider --|> BaseProvider
+      DatadogProvider --|> BaseProvider
+      ZabbixProvider --|> BaseProvider
+      ElasticProvider --|> BaseProvider
+      WebhookProvider --|> BaseProvider
+    }
+    
+    ProvidersFactory --> PrometheusProvider
+    ProvidersFactory --> GrafanaProvider
+    ProvidersFactory --> CloudWatchProvider
+    ProvidersFactory --> DatadogProvider
+    ProvidersFactory --> ZabbixProvider
+    ProvidersFactory --> ElasticProvider
+    ProvidersFactory --> WebhookProvider
+  }
+  
+  ' Alert Processing
+  package "Alert Processing" {
+    [Alert Normalization] as AlertNormalization
+    [Alert Deduplication] as AlertDeduplication
+    [Alert Enrichment] as AlertEnrichment
+    [Task Queue (ARQ)] as TaskQueue
+    
+    AlertNormalization --> AlertDeduplication
+    AlertDeduplication --> AlertEnrichment
+    AlertEnrichment --> TaskQueue
+  }
+  
+  ' Context and Configuration
+  package "Context & Configuration" {
+    [ContextManager] as ContextManager
+    [SecretManager] as SecretManager
+    
+    ContextManager <-- ProvidersFactory
+    SecretManager <-- ProvidersFactory
+  }
+  
+  ' Core Platform Components
+  [Correlation Engine] as CorrelationEngine
+  [Workflow Engine] as WorkflowEngine
+  
+  TaskQueue --> CorrelationEngine
+  ProvidersFactory <-- WorkflowEngine
+}
+
+' External Connections
+Prometheus --> PrometheusProvider : "pull alerts"
+Grafana --> GrafanaProvider : "pull alerts"
+CloudWatch --> CloudWatchProvider : "pull alerts"
+Datadog --> DatadogProvider : "pull alerts"
+Zabbix --> ZabbixProvider : "pull alerts"
+ElasticSearch --> ElasticProvider : "pull alerts"
+
+Prometheus --|> GenericWebhook : "push alerts"
+Grafana --|> GenericWebhook : "push alerts"
+CloudWatch --|> GenericWebhook : "push alerts"
+Datadog --|> GenericWebhook : "push alerts"
+Zabbix --|> GenericWebhook : "push alerts"
+ElasticSearch --|> GenericWebhook : "push alerts"
+
+Prometheus --|> ProviderWebhook : "push provider-specific alerts"
+Grafana --|> ProviderWebhook : "push provider-specific alerts"
+CloudWatch --|> ProviderWebhook : "push provider-specific alerts"
+Datadog --|> ProviderWebhook : "push provider-specific alerts"
+Zabbix --|> ProviderWebhook : "push provider-specific alerts"
+ElasticSearch --|> ProviderWebhook : "push provider-specific alerts"
+
+CustomSystem --|> WebhookProvider : "push alerts"
+
+' Flow from API to Processing
+GenericWebhook --> AlertNormalization
+ProviderWebhook --> ProviderAPI
+ProviderAPI --> ProvidersFactory
+ProvidersFactory --> AlertNormalization
+
+' Notes
+note right of WebhookProvider
+  Generic webhook provider for
+  custom integrations without
+  specific provider
+end note
+
+note bottom of ProvidersFactory
+  Central factory that loads,
+  validates and instantiates
+  provider instances
+end note
+
+note bottom of ContextManager
+  Manages context data for
+  providers including tenant,
+  authentication, and workflow
+  execution context
+end note
+
+note right of SecretManager
+  Securely stores and manages
+  sensitive provider credentials
+end note
+
+note bottom of TaskQueue
+  Asynchronous processing of 
+  alerts using ARQ and Redis
+  for scalable ingestion
+end note
+
+note right of ProviderWebhook
+  /api/alerts/event/{provider_type}
+  Accepts provider-specific format
+end note
+
+note right of GenericWebhook
+  /api/alerts/event
+  Accepts Keep's alert format
+end note
+
+@enduml 

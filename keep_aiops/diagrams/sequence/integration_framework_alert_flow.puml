@@ -1,0 +1,169 @@
+@startuml Integration_Framework_Alert_Flow
+
+title Keep AIOps Platform - Alert Ingestion Flow
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "External\nSystem" as External
+participant "API\nEndpoint" as API
+participant "Provider\nFactory" as Factory
+participant "Provider\nImplementation" as Provider
+participant "Alert\nProcessor" as Processor
+participant "Task\nQueue" as Queue
+participant "Correlation\nEngine" as Engine
+participant "Workflow\nManager" as Manager
+
+== Webhook Alert Flow ==
+
+External -> API: POST /api/alerts/event/{provider_type}
+activate API
+
+API -> API: Validate request & authentication
+API -> Factory: Get provider instance
+activate Factory
+
+Factory -> Provider: Instantiate provider
+activate Provider
+Provider -> Factory: Return provider instance
+deactivate Provider
+Factory -> API: Return provider instance
+deactivate Factory
+
+API -> Provider: parse_event_raw_body(raw_body)
+activate Provider
+Provider -> Provider: Parse raw event data
+Provider -> API: Return parsed event
+deactivate Provider
+
+API -> Provider: format_alert(event, tenant_id, provider_type, provider_id)
+activate Provider
+Provider -> Provider: _format_alert() - Transform to AlertDto
+Provider -> API: Return normalized AlertDto(s)
+deactivate Provider
+
+API -> Processor: Process alert(s)
+activate Processor
+
+Processor -> Processor: Calculate fingerprint
+Processor -> Processor: Check for duplicates
+Processor -> Processor: Apply enrichments
+
+alt Alert needs asynchronous processing
+  Processor -> Queue: Add alert to queue
+  activate Queue
+  Queue -> Processor: Task queued (202 Accepted)
+  deactivate Queue
+else Process alert immediately
+  Processor -> Processor: Full alert processing
+end
+
+Processor -> API: Processing initiated
+deactivate Processor
+
+API -> External: 202 Accepted
+deactivate API
+
+== Asynchronous Alert Processing ==
+
+Queue -> Processor: Process queued alert
+activate Processor
+Processor -> Processor: Process alert data
+
+alt Alert passes deduplication
+  Processor -> Engine: Submit alert for correlation
+  activate Engine
+  Engine -> Engine: Apply correlation rules
+  
+  alt Should create incident
+    Engine -> Engine: Create new incident
+    Engine -> Manager: Trigger incident workflows
+    activate Manager
+    Manager -> Manager: Run relevant workflows
+    deactivate Manager
+  else Attach to existing incident
+    Engine -> Engine: Update existing incident
+  end
+  
+  deactivate Engine
+end
+
+deactivate Processor
+
+== Pull-Based Alert Flow ==
+
+box "Scheduled Execution" #LightBlue
+participant "Scheduler" as Scheduler
+end box
+
+Scheduler -> Provider: get_alerts()
+activate Provider
+Provider -> External: API request for alerts
+activate External
+External -> Provider: Alert data response
+deactivate External
+
+Provider -> Provider: _format_alert() - Transform to AlertDto
+Provider -> Scheduler: Return normalized AlertDto(s)
+deactivate Provider
+
+Scheduler -> Processor: Process batch of alerts
+activate Processor
+Processor -> Processor: Process each alert
+  
+loop for each alert
+  Processor -> Processor: Calculate fingerprint
+  Processor -> Processor: Check for duplicates
+  Processor -> Processor: Apply enrichments
+  Processor -> Engine: Submit alert for correlation
+end
+  
+Processor -> Scheduler: Processing complete
+deactivate Processor
+
+note right of External
+  External monitoring systems
+  like Prometheus, Grafana, etc.
+end note
+
+note over API
+  Webhook endpoints:
+  - /api/alerts/event
+  - /api/alerts/event/{provider_type}
+end note
+
+note right of Factory
+  Loads provider class,
+  validates config,
+  and instantiates provider
+end note
+
+note right of Provider
+  Provider-specific logic for:
+  - Parsing raw events
+  - Formatting alerts
+  - Authentication
+end note
+
+note right of Processor
+  Handles:
+  - Validation
+  - Normalization
+  - Deduplication
+  - Enrichment
+end note
+
+note right of Engine
+  Applies correlation rules
+  to determine if alert should:
+  - Create new incident
+  - Add to existing incident
+  - Be processed independently
+end note
+
+@enduml 

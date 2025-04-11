@@ -1,0 +1,171 @@
+@startuml Knowledge_Management_Flow
+
+title Keep AIOps Platform - Knowledge Management Flow
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "IT Operator" as User
+participant "Incident\nUI" as IncidentUI
+participant "Knowledge\nRetrieval" as KnowledgeRetrieval
+participant "LLM\nService" as LLM
+participant "Knowledge\nBase" as KB
+participant "Vector\nDatabase" as VectorDB
+participant "Learning\nPipeline" as Learning
+participant "Model\nRegistry" as ModelRegistry
+
+== Knowledge Capture from Resolution ==
+
+User -> IncidentUI: Resolve incident
+activate IncidentUI
+
+IncidentUI -> IncidentUI: Record resolution actions
+IncidentUI -> KB: Store incident resolution
+activate KB
+KB --> IncidentUI: Resolution stored
+deactivate KB
+
+IncidentUI -> LLM: Extract knowledge from resolution
+activate LLM
+
+LLM -> LLM: Analyze resolution steps
+LLM -> LLM: Identify key actions and patterns
+LLM -> KB: Store structured knowledge
+activate KB
+KB --> LLM: Knowledge stored
+deactivate KB
+
+LLM -> VectorDB: Create embedding vectors
+activate VectorDB
+VectorDB --> LLM: Vectors stored
+deactivate VectorDB
+
+LLM --> IncidentUI: Knowledge extraction complete
+deactivate LLM
+
+IncidentUI --> User: Resolution confirmed
+deactivate IncidentUI
+
+note right of LLM
+  LLM extracts structured knowledge
+  from unstructured resolution notes
+  and operator actions
+end note
+
+== Knowledge Retrieval for New Incident ==
+
+User -> IncidentUI: View new incident
+activate IncidentUI
+
+IncidentUI -> KnowledgeRetrieval: Request similar incidents
+activate KnowledgeRetrieval
+
+KnowledgeRetrieval -> VectorDB: Perform similarity search
+activate VectorDB
+
+VectorDB -> VectorDB: Calculate embeddings
+VectorDB -> VectorDB: Find nearest neighbors
+VectorDB --> KnowledgeRetrieval: Return similar incidents
+deactivate VectorDB
+
+KnowledgeRetrieval -> KB: Retrieve resolution knowledge
+activate KB
+KB --> KnowledgeRetrieval: Return knowledge items
+deactivate KB
+
+KnowledgeRetrieval -> LLM: Generate context-aware suggestions
+activate LLM
+LLM -> LLM: Analyze current incident
+LLM -> LLM: Adapt historical knowledge
+LLM --> KnowledgeRetrieval: Return suggestions
+deactivate LLM
+
+KnowledgeRetrieval --> IncidentUI: Deliver suggested resolutions
+deactivate KnowledgeRetrieval
+
+IncidentUI --> User: Display similar incidents and solutions
+deactivate IncidentUI
+
+note right of VectorDB
+  Semantic search finds incidents
+  with similar patterns regardless
+  of specific text matching
+end note
+
+== Knowledge Feedback Loop ==
+
+User -> IncidentUI: Apply suggested resolution
+activate IncidentUI
+
+User -> IncidentUI: Provide feedback on suggestion
+IncidentUI -> Learning: Submit feedback
+activate Learning
+
+Learning -> KB: Store feedback
+activate KB
+KB --> Learning: Feedback stored
+deactivate KB
+
+Learning -> Learning: Analyze feedback patterns
+Learning -> ModelRegistry: Update model weights
+activate ModelRegistry
+
+ModelRegistry -> ModelRegistry: Adjust similarity thresholds
+ModelRegistry -> ModelRegistry: Fine-tune LLM prompt templates
+ModelRegistry --> Learning: Model updated
+deactivate ModelRegistry
+
+Learning -> VectorDB: Update embeddings
+activate VectorDB
+VectorDB --> Learning: Embeddings updated
+deactivate VectorDB
+
+Learning --> IncidentUI: Feedback processed
+deactivate Learning
+
+IncidentUI --> User: Confirm feedback received
+deactivate IncidentUI
+
+note right of Learning
+  Active learning continuously improves
+  suggestion quality based on
+  operator feedback
+end note
+
+== Proactive Knowledge Application ==
+
+Learning -> Learning: Analyze incident patterns
+activate Learning
+
+Learning -> LLM: Generate pattern insights
+activate LLM
+LLM -> LLM: Identify recurring patterns
+LLM -> LLM: Predict future incidents
+LLM --> Learning: Return insights
+deactivate LLM
+
+Learning -> KB: Store predictive patterns
+activate KB
+KB --> Learning: Patterns stored
+deactivate KB
+
+Learning -> IncidentUI: Push proactive notification
+activate IncidentUI
+IncidentUI --> User: Alert about potential issue
+deactivate IncidentUI
+
+Learning -> Learning: Schedule model retraining
+deactivate Learning
+
+note right of Learning
+  System learns to predict
+  incidents before they occur
+  based on historical patterns
+end note
+
+@enduml 

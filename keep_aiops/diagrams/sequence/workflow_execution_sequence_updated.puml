@@ -1,0 +1,260 @@
+@startuml Workflow_Execution_Sequence_Updated
+
+title Keep AIOps Platform - Workflow Execution Sequence
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "User or System" as Trigger
+participant "API\nEndpoint" as API
+participant "WorkflowManager" as Manager
+participant "WorkflowScheduler" as Scheduler
+participant "WorkflowStore" as Store
+participant "ThreadPoolExecutor" as Executor
+participant "Workflow" as WF
+participant "ContextManager" as Context
+participant "Step" as Step
+participant "ProviderFactory" as ProviderFactory
+participant "BaseProvider" as Provider
+participant "External\nSystem" as External
+
+== Workflow Triggering ==
+
+alt Scheduled Trigger
+  Scheduler -> Scheduler: _handle_interval_workflows()
+  activate Scheduler
+  Scheduler -> Manager: _get_workflow_from_store(tenant_id, workflow_model)
+  activate Manager
+  Manager -> Store: get_workflow(tenant_id, workflow_id)
+  activate Store
+  Store --> Manager: Workflow instance
+  deactivate Store
+  Manager --> Scheduler: Workflow instance
+  deactivate Manager
+else Manual Trigger
+  Trigger -> API: POST /api/workflows/{workflow_id}/run
+  activate API
+  API -> Scheduler: handle_manual_event_workflow(workflow_id, tenant_id, user, event)
+  activate Scheduler
+else Event Trigger (Alert or Incident)
+  Trigger -> API: POST /api/alerts/event
+  activate API
+  API -> Manager: insert_events(tenant_id, events)
+  activate Manager
+  Manager -> Store: get_all_workflows(tenant_id)
+  activate Store
+  Store --> Manager: List of workflow models
+  deactivate Store
+  loop for each workflow
+    Manager -> Manager: _get_workflow_from_store(tenant_id, workflow_model)
+    alt matches trigger conditions
+      Manager -> Scheduler: Add to workflows_to_run
+    end
+  end
+  Manager --> API: Acknowledges receipt
+  deactivate Manager
+  API --> Trigger: HTTP 202 Accepted
+  deactivate API
+end alt
+
+== Workflow Execution Preparation ==
+
+Scheduler -> Scheduler: _handle_event_workflows()
+activate Scheduler
+note right of Scheduler
+  Processes workflows_to_run queue
+  for workflows triggered by events
+end note
+
+Scheduler -> Executor: submit(_run_workflow)
+activate Executor
+
+== Workflow Execution ==
+
+Executor -> Scheduler: _run_workflow(tenant_id, workflow_id, workflow, execution_id)
+activate Scheduler
+
+alt Check workflow status
+  alt Workflow is disabled
+    Scheduler -> Scheduler: Log skipping disabled workflow
+    Scheduler -> Scheduler: _finish_workflow_execution(status=SKIPPED)
+  else Premium provider check (in multi-tenant mode)
+    Scheduler -> Manager: _check_premium_providers(workflow)
+    activate Manager
+    alt Premium provider not allowed
+      Manager --> Scheduler: Raise exception
+      Scheduler -> Scheduler: _finish_workflow_execution(status=ERROR)
+    end
+    deactivate Manager
+  end
+end
+
+Scheduler -> Context: set_event_context / set_alert_context / set_incident_context
+activate Context
+Context --> Scheduler: Context set
+deactivate Context
+
+Scheduler -> Manager: _run_workflow(workflow, workflow_execution_id)
+activate Manager
+
+Manager -> WF: run(workflow_execution_id)
+activate WF
+
+WF -> Context: set_execution_context(workflow_id, execution_id)
+activate Context
+Context --> WF: Execution context set
+deactivate Context
+
+== Step Execution ==
+
+WF -> WF: run_steps()
+activate WF
+
+loop for each step in workflow_steps
+  WF -> Step: run()
+  activate Step
+  
+  alt Has foreach attribute
+    Step -> Step: _run_foreach()
+    activate Step
+    Step -> Context: get_full_context()
+    activate Context
+    Context --> Step: Complete context
+    deactivate Context
+    
+    loop for each item in foreach
+      Step -> Context: set_for_each_context(item)
+      activate Context
+      Context --> Step: Context updated
+      deactivate Context
+      
+      Step -> Step: _run_single()
+      activate Step
+    end
+    deactivate Step
+  else No foreach
+    Step -> Step: _run_single()
+    activate Step
+  end
+  
+  Step -> Context: set_step_vars(step_id, vars, aliases)
+  activate Context
+  Context --> Step: Variables set
+  deactivate Context
+  
+  alt Has conditions
+    loop for each condition
+      Step -> ConditionFactory: get_condition(type, name, config)
+      activate ConditionFactory
+      ConditionFactory --> Step: Condition instance
+      deactivate ConditionFactory
+      
+      Step -> Step: condition.apply(compare_to, compare_value)
+      Step -> Context: set_condition_results(step_id, condition_name, result)
+      activate Context
+      Context --> Step: Condition results stored
+      deactivate Context
+      
+      alt Condition failed
+        Step --> WF: False (skip)
+        WF -> WF: continue loop
+        deactivate Step
+        deactivate Step
+        continue
+      end
+    end
+  end
+  
+  alt Has throttling
+    Step -> Step: _check_throttling(action_name)
+    alt Throttled
+      Step --> WF: False (throttled)
+      WF -> WF: continue loop
+      deactivate Step
+      deactivate Step
+      continue
+    end
+  end
+  
+  alt Provider Step
+    Step -> ProviderFactory: get_provider(provider_type, provider_id, config)
+    activate ProviderFactory
+    ProviderFactory --> Step: Provider instance
+    deactivate ProviderFactory
+    
+    Step -> IOHandler: render all provider parameters
+    activate IOHandler
+    IOHandler --> Step: Rendered parameters
+    deactivate IOHandler
+    
+    Step -> Provider: Execute provider operation
+    activate Provider
+    Provider -> External: Make API call or perform operation
+    activate External
+    External --> Provider: Response
+    deactivate External
+    Provider --> Step: Operation result
+    deactivate Provider
+  end
+  
+  Step --> WF: True/False (success/failure)
+  deactivate Step
+  deactivate Step
+  
+  alt Step failed
+    WF -> WF: break or continue based on error handling
+  else Step success but continue_to_next_step is False
+    WF -> WF: break
+  end
+end
+deactivate WF
+
+== Action Execution ==
+
+WF -> WF: run_actions()
+activate WF
+
+loop for each action in workflow_actions
+  WF -> Step: run()
+  activate Step
+  
+  Step --> WF: action_ran, action_error, action_stop
+  deactivate Step
+  
+  alt Action error
+    WF -> WF: Record error
+  else Action success but stop requested
+    WF -> WF: break
+  end
+end
+deactivate WF
+
+alt Error in execution
+  WF -> Step: on_failure.run()
+  activate Step
+  Step --> WF: Error handling result
+  deactivate Step
+end
+
+WF --> Manager: Error list or None
+deactivate WF
+
+Manager -> Manager: _get_workflow_results(workflow)
+Manager -> Manager: _save_workflow_results(workflow, workflow_execution_id)
+Manager --> Scheduler: Execution result
+deactivate Manager
+
+Scheduler -> Scheduler: _finish_workflow_execution(status=SUCCESS/ERROR)
+Scheduler --> Executor: Execution complete
+deactivate Scheduler
+
+Executor --> Scheduler: Job completed
+deactivate Executor
+deactivate Scheduler
+
+@enduml 

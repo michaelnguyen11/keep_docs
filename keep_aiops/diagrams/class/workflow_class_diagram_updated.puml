@@ -1,0 +1,267 @@
+@startuml Workflow_Class_Diagram_Updated
+
+title Keep AIOps Platform - Workflow System Classes
+
+!theme plain
+skinparam linetype ortho
+skinparam ClassBackgroundColor WhiteSmoke
+skinparam ClassBorderColor Black
+skinparam ClassFontColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' Core Workflow Classes
+class Workflow {
+  +workflow_id: str
+  +workflow_name: str
+  +workflow_owners: List[str]
+  +workflow_tags: List[str]
+  +workflow_interval: int
+  +workflow_triggers: List[dict]
+  +workflow_steps: List[Step]
+  +workflow_actions: List[Step]
+  +workflow_description: str
+  +workflow_disabled: bool
+  +workflow_permissions: List[str]
+  +workflow_providers: List[dict]
+  +workflow_providers_type: List[str]
+  +workflow_strategy: WorkflowStrategy
+  +workflow_consts: Dict[str, str]
+  +workflow_debug: bool
+  +on_failure: Step
+  +context_manager: ContextManager
+  +io_handler: IOHandler
+  +logger: Logger
+  +run_steps(): void
+  +run_action(action: Step): (bool, str, bool)
+  +run_actions(): (list, list)
+  +run(workflow_execution_id): List[str]
+  +check_run_permissions(workflow_permissions, user_email, user_role): bool
+}
+
+enum WorkflowStrategy {
+  NONPARALLEL
+  NONPARALLEL_WITH_RETRY
+  PARALLEL
+}
+
+class WorkflowManager {
+  -instance: WorkflowManager
+  -scheduler: WorkflowScheduler
+  -workflow_store: WorkflowStore
+  -started: bool
+  -debug: bool
+  -logger: Logger
+  +PREMIUM_PROVIDERS: List[str]
+  +get_instance(): WorkflowManager
+  +start()
+  +stop()
+  +insert_incident(tenant_id, incident, trigger)
+  +insert_events(tenant_id, events)
+  -_apply_filter(filter_val, value): bool
+  -_get_workflow_from_store(tenant_id, workflow_model): Workflow
+  -_get_event_value(event, filter_key)
+  -_check_premium_providers(workflow): void
+  -_run_workflow_on_failure(workflow, workflow_execution_id, error_message): void
+  -_run_workflow(workflow, workflow_execution_id): void
+  -_get_workflow_results(workflow): Dict
+  -_save_workflow_results(workflow, workflow_execution_id): void
+  -_run_workflows_from_cli(workflows): void
+}
+
+class WorkflowScheduler {
+  -workflow_manager: WorkflowManager
+  -workflow_store: WorkflowStore
+  -workflows_to_run: List[Dict]
+  -_stop: bool
+  -lock: Lock
+  -interval_enabled: bool
+  -executor: ThreadPoolExecutor
+  -scheduler_future: Future
+  -futures: Set[Future]
+  -MAX_SIZE_SIGNED_INT: int
+  -MAX_WORKERS: int
+  +_update_queue_metrics(): void
+  +start(): void
+  +handle_manual_event_workflow(workflow_id, tenant_id, triggered_by_user, event, workflow, test_run, inputs): str
+  +_get_unique_execution_number(fingerprint, workflow_id): int
+  +_timeout_workflows(): void
+  +_handle_event_workflows(): void
+  +_handle_interval_workflows(): void
+  +_run_workflow(tenant_id, workflow_id, workflow, workflow_execution_id, event_context, inputs): void
+  +_start(): void
+  +stop(): void
+  +_finish_workflow_execution(tenant_id, workflow_id, workflow_execution_id, status, error): void
+}
+
+class WorkflowStore {
+  -parser: Parser
+  -logger: Logger
+  +get_workflow_execution(tenant_id, workflow_execution_id)
+  +create_workflow(tenant_id, created_by, workflow): WorkflowModel
+  +delete_workflow(tenant_id, workflow_id): void
+  +get_raw_workflow(tenant_id, workflow_id): str
+  +get_workflow(tenant_id, workflow_id): Workflow
+  +get_workflow_from_dict(tenant_id, workflow): Workflow
+  +get_all_workflows(tenant_id): List[WorkflowModel]
+  +get_all_workflows_with_last_execution(tenant_id, cel, limit, offset, sort_by, sort_dir, session): (List[Dict], int)
+  +get_all_workflows_yamls(tenant_id): List[str]
+  +get_workflows_from_path(tenant_id, workflow_path, providers_file, actions_file): List[Workflow]
+  +get_random_workflow_templates(tenant_id, workflows_dir, limit): List[Dict]
+  +group_last_workflow_executions(workflows): List[Dict]
+  +get_workflow_meta_data(tenant_id, workflow, installed_providers_by_type): Dict
+  +is_alert_rule_workflow(workflow_raw): bool
+}
+
+' Step-related Classes
+class Step {
+  -config: Dict
+  -step_id: str
+  -step_type: StepType
+  -provider: BaseProvider
+  -provider_parameters: Dict
+  -on_failure: Dict
+  -context_manager: ContextManager
+  -io_handler: IOHandler
+  -conditions: List
+  -vars: Dict
+  -conditions_results: Dict
+  -logger: Logger
+  -__retry: Dict
+  -__retry_count: int
+  -__retry_interval: int
+  -__continue_to_next_step: bool
+  +foreach: str
+  +name: str
+  +continue_to_next_step: bool
+  +run(): bool
+  -_check_throttling(action_name): bool
+  -_get_foreach_items(): List
+  -_run_foreach(): bool
+  -_run_single(dont_render): bool
+}
+
+enum StepType {
+  STEP
+  ACTION
+}
+
+class StepError {
+}
+
+class IOHandler {
+  -context_manager: ContextManager
+  +write_context(key, value): void
+  +read_context(key): Any
+  +read_all_context(): Dict
+  +render(template): str
+}
+
+class ContextManager {
+  -event_context: Dict
+  -alert_context: Dict
+  -incident_context: Dict
+  -execution_context: Dict
+  -consts_context: Dict
+  -secret_context: Dict
+  -logger: Logger
+  -throttle_context: Dict
+  -variables_context: Dict
+  -foreach_context: Any
+  -condition_results: Dict
+  +set_event_context(event): void
+  +set_alert_context(alert): void
+  +set_incident_context(incident): void
+  +set_execution_context(workflow_id, execution_id): void
+  +set_consts_context(consts): void
+  +set_secret_context(): void
+  +set_throttle_context(throttle_name, value): void
+  +set_for_each_context(value): void
+  +set_step_vars(step_id, _vars, _aliases): void
+  +set_condition_results(step_id, condition_name, result): void
+  +get_workflow_id(): str
+  +get_full_context(): Dict
+  +get_context(): Dict
+  +read_context(path): Any
+  +write_context(path, value): void
+}
+
+' Provider-related Classes
+class ProviderFactory {
+  +get_provider(provider_type, provider_id, provider_config): BaseProvider
+}
+
+abstract class BaseProvider {
+  +provider_id: str
+  +validate_config(): bool
+  +test_connection(): bool
+  +dispose(): void
+  {abstract} +_get_specific_provider_id(): str
+  {abstract} +_validate_specific_config(): bool
+  {abstract} +_test_specific_connection(): bool
+}
+
+class Parser {
+  +parse_interval(workflow): int
+  +parse_disabled(workflow): bool
+  +parse(tenant_id, workflow_yaml, providers_file, actions_file): List[Workflow]
+}
+
+' Relationships
+Workflow "1" *-- "*" Step : contains
+Workflow --> WorkflowStrategy
+Workflow --> ContextManager : uses
+Workflow --> IOHandler : uses
+
+WorkflowManager "1" *-- "1" WorkflowScheduler : uses
+WorkflowManager "1" *-- "1" WorkflowStore : uses
+WorkflowManager ..> Workflow : creates/manages
+
+WorkflowScheduler --> WorkflowStore : uses
+WorkflowScheduler ..> Workflow : executes
+
+WorkflowStore ..> Workflow : loads/saves
+WorkflowStore --> Parser : uses
+
+Step --> StepType
+Step ---> BaseProvider : uses
+Step --> ContextManager : uses
+Step --> IOHandler : uses for I/O
+Step ..> StepError : throws
+
+BaseProvider <|-- "Various Provider Implementations"
+
+Parser ..> Workflow : creates
+
+ContextManager <-- IOHandler : uses
+
+note right of Workflow
+  Core unit of automation
+  Contains steps and actions
+  that run in sequence
+end note
+
+note right of WorkflowManager
+  Singleton that manages workflow lifecycle:
+  - Loading
+  - Execution
+  - Event handling
+end note
+
+note left of Step
+  Atomic unit of execution
+  Can be a step or an action
+  Interacts with external
+  systems via providers
+end note
+
+note bottom of ContextManager
+  Stores and manages context:
+  - Event data
+  - Alert information
+  - Incident details
+  - Execution state
+  - Variables and secrets
+end note
+
+@enduml 

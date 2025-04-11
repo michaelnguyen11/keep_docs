@@ -1,0 +1,246 @@
+@startuml System_Administration_Flows
+
+title Keep AIOps Platform - System Administration Flows
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "Admin User" as Admin
+participant "Admin UI" as UI
+participant "API\nEndpoints" as API
+participant "Settings\nService" as Settings
+participant "Identity\nManager" as Identity
+participant "Secret\nManager" as Secret
+participant "Config\nManager" as Config
+participant "Database" as DB
+participant "Kubernetes\nAPI" as K8s
+
+== Configuration Management ==
+
+Admin -> UI: Update SMTP settings
+activate UI
+
+UI -> API: POST /settings/smtp
+activate API
+
+API -> Settings: update_smtp_settings()
+activate Settings
+
+Settings -> Secret: write_secret()
+activate Secret
+Secret -> DB: Store encrypted SMTP config
+deactivate Secret
+
+Settings --> API: Settings updated
+deactivate Settings
+
+API --> UI: 200 OK Response
+deactivate API
+
+UI -> UI: Show success message
+UI --> Admin: Display confirmation
+deactivate UI
+
+note right of Secret
+  Sensitive configuration is
+  stored encrypted in the
+  secret manager
+end note
+
+== User Management ==
+
+Admin -> UI: Create new user with role
+activate UI
+
+UI -> API: POST /users
+activate API
+
+API -> Identity: create_user()
+activate Identity
+
+Identity -> DB: Create user record
+activate DB
+DB --> Identity: User created
+deactivate DB
+
+Identity -> Identity: Assign role
+Identity --> API: User created success
+deactivate Identity
+
+API --> UI: 200 OK with user data
+deactivate API
+
+UI -> UI: Update user list
+UI --> Admin: Show user created
+deactivate UI
+
+note right of Identity
+  Role-based permissions are
+  enforced through Identity
+  Manager's RBAC system
+end note
+
+== API Key Management ==
+
+Admin -> UI: Generate new API key
+activate UI
+
+UI -> API: POST /settings/apikey
+activate API
+
+API -> Settings: create_api_key()
+activate Settings
+
+Settings -> Secret: generate_secure_token()
+activate Secret
+Secret --> Settings: Return token
+deactivate Secret
+
+Settings -> DB: Store API key metadata
+activate DB
+DB --> Settings: Confirm storage
+deactivate DB
+
+Settings --> API: Return new API key
+deactivate Settings
+
+API --> UI: Return API key details
+deactivate API
+
+UI --> Admin: Display API key (once only)
+deactivate UI
+
+note right of Settings
+  API keys are shown only once
+  and stored using secure hashing
+end note
+
+== Tenant Configuration ==
+
+Admin -> UI: Modify tenant settings
+activate UI
+
+UI -> API: PUT /settings/tenant/configuration
+activate API
+
+API -> Config: update_tenant_config()
+activate Config
+
+Config -> DB: Update tenant config record
+activate DB
+DB --> Config: Configuration updated
+deactivate DB
+
+Config -> Config: Invalidate config cache
+Config --> API: Config updated
+deactivate Config
+
+API --> UI: 200 OK Response
+deactivate API
+
+UI -> UI: Refresh settings view
+UI --> Admin: Show success message
+deactivate UI
+
+note right of Config
+  Changes take effect within
+  the TENANT_CONFIGURATION_RELOAD_TIME
+  (default: 5 minutes)
+end note
+
+== System Health Check ==
+
+Admin -> UI: View system health
+activate UI
+
+UI -> API: GET /healthcheck
+activate API
+
+API -> API: Basic API health check
+
+API -> DB: Test database connection
+activate DB
+DB --> API: Connection OK
+deactivate DB
+
+API -> Config: Check configuration
+activate Config
+Config --> API: Configuration valid
+deactivate Config
+
+API -> API: Check worker processes
+
+API --> UI: Return health status
+deactivate API
+
+UI -> UI: Render health dashboard
+UI --> Admin: Display system status
+deactivate UI
+
+note right of API
+  Health checks provide real-time
+  visibility into component status
+end note
+
+== Horizontal Scaling ==
+
+Admin -> UI: Increase system capacity
+activate UI
+
+UI -> K8s: Update deployment replicas
+activate K8s
+
+K8s -> K8s: Scale up backend pods
+K8s -> K8s: Update HPA configuration
+
+K8s --> UI: Scaling initiated
+deactivate K8s
+
+UI -> UI: Monitor scaling progress
+UI --> Admin: Show scaling status
+deactivate UI
+
+note right of K8s
+  Kubernetes handles the actual
+  provisioning of additional
+  resources based on HPA rules
+end note
+
+== Log Level Configuration ==
+
+Admin -> UI: Change log level to DEBUG
+activate UI
+
+UI -> API: POST /settings/logging
+activate API
+
+API -> Config: set_log_level("DEBUG")
+activate Config
+
+Config -> DB: Store log level setting
+activate DB
+DB --> Config: Setting saved
+deactivate DB
+
+Config -> Config: Apply to active loggers
+Config --> API: Log level updated
+deactivate Config
+
+API --> UI: 200 OK Response
+deactivate API
+
+UI -> UI: Update logging settings
+UI --> Admin: Show confirmation
+deactivate UI
+
+note right of Config
+  Log level changes are applied
+  immediately to all components
+end note
+
+@enduml 

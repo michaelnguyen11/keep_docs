@@ -49,6 +49,20 @@
         .highlight-btn:hover {
             background-color: #e68a00;
         }
+        .module-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: #3f51b5;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .module-btn:hover {
+            background-color: #303f9f;
+        }
     </style>
 </head>
 <body>
@@ -73,6 +87,13 @@
                 <a href="keep_aiops/README.md" class="btn">View Documentation</a>
                 <a href="keep_aiops/images/index.html" class="btn">View Diagrams</a>
                 <a href="keep_aiops/CORE_MODULES_CHECKLIST.md" class="btn highlight-btn">View Core Modules Checklist</a>
+            </div>
+            <h4>Core Module Documentation:</h4>
+            <div>
+                <a href="keep_aiops/ALERT_INGESTION_PROCESSING.md" class="module-btn">Alert Ingestion</a>
+                <a href="keep_aiops/ALERT_CORRELATION_ENGINE.md" class="module-btn">Alert Correlation</a>
+                <a href="keep_aiops/INCIDENT_MANAGEMENT.md" class="module-btn">Incident Management</a>
+                <a href="keep_aiops/ML_BASED_ANOMALY_DETECTION.md" class="module-btn">ML Anomaly Detection</a>
             </div>
         </div>
         
@@ -99,12 +120,48 @@
     </div>
     
     <div class="section">
+        <h2>Key Modules</h2>
+        <p>Explore documentation for specific Keep AIOps modules:</p>
+        <div class="card">
+            <h3>Alert Ingestion & Processing</h3>
+            <p>The module responsible for collecting and normalizing alerts from various monitoring systems.</p>
+            <a href="keep_aiops/ALERT_INGESTION_PROCESSING.md" class="btn">View Documentation</a>
+            <a href="keep_aiops/images/alert_processing_sequence.png" class="btn">View Sequence Diagram</a>
+        </div>
+        
+        <div class="card">
+            <h3>Alert Correlation Engine</h3>
+            <p>The module that analyzes alerts to identify patterns and group related alerts into incidents.</p>
+            <a href="keep_aiops/ALERT_CORRELATION_ENGINE.md" class="btn">View Documentation</a>
+            <a href="keep_aiops/images/correlation_sequence.png" class="btn">View Sequence Diagram</a>
+            <a href="keep_aiops/images/correlation_class_diagram.png" class="btn">View Class Diagram</a>
+        </div>
+        
+        <div class="card">
+            <h3>Incident Management</h3>
+            <p>The central hub for tracking, managing, and resolving operational issues.</p>
+            <a href="keep_aiops/INCIDENT_MANAGEMENT.md" class="btn">View Documentation</a>
+            <a href="keep_aiops/images/incident_lifecycle_sequence.png" class="btn">View Sequence Diagram</a>
+            <a href="keep_aiops/images/incident_management_class_diagram.png" class="btn">View Class Diagram</a>
+        </div>
+        
+        <div class="card">
+            <h3>ML-Based Anomaly Detection</h3>
+            <p>The module that leverages machine learning to identify anomalies in alert data.</p>
+            <a href="keep_aiops/ML_BASED_ANOMALY_DETECTION.md" class="btn">View Documentation</a>
+            <a href="keep_aiops/images/ml_anomaly_detection_sequence.png" class="btn">View Sequence Diagram</a>
+            <a href="keep_aiops/images/ml_anomaly_detection_class_diagram.png" class="btn">View Class Diagram</a>
+        </div>
+    </div>
+    
+    <div class="section">
         <h2>For Junior Team Members</h2>
         <p>If you're new to the team or need a more concrete understanding of the codebase:</p>
         <ol>
             <li>Start with the <a href="keep_aiops/images/index.html#class-diagrams">Class Diagrams</a> which show how the system's main classes are structured</li>
             <li>Review the <a href="keep_aiops/images/index.html#sequence-diagrams">Sequence Diagrams</a> to understand how the components interact</li>
             <li>Then explore the higher-level <a href="keep_aiops/images/index.html#c4-architecture-diagrams">C4 Diagrams</a> for the big picture</li>
+            <li>Follow the <a href="keep_aiops/JUNIOR_DEVELOPER_GUIDE.md">Junior Developer Guide</a> for a step-by-step approach to understanding the system</li>
         </ol>
     </div>
 </body>

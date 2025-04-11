@@ -1,0 +1,145 @@
+@startuml Knowledge_Management_Architecture
+
+title Keep AIOps Platform - Knowledge Management Architecture
+
+!theme plain
+skinparam linetype ortho
+skinparam ComponentBackgroundColor WhiteSmoke
+skinparam ComponentBorderColor Black
+skinparam DatabaseBackgroundColor WhiteSmoke
+skinparam DatabaseBorderColor Black
+skinparam PackageBackgroundColor AliceBlue
+skinparam PackageBorderColor Black
+skinparam ArrowColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' Define top-level components
+package "LLM Integration Layer" {
+  component "External AI Framework" as ExternalAI {
+    component "API Client" as ApiClient
+    component "Model Registry" as ModelRegistry
+    component "Configuration Manager" as ConfigManager
+  }
+  
+  component "Transformer Models" as Transformers {
+    component "Alert Correlation Engine" as CorrelationEngine
+    component "Semantic Embeddings" as Embeddings
+    component "Knowledge Extraction" as KnowledgeExtraction
+  }
+  
+  component "LLM Providers" as LLMProviders {
+    component "Cloud LLM Services" as CloudLLM
+    component "On-Premises Models" as OnPremLLM
+    component "Fine-Tuned Models" as FineTunedLLM
+  }
+  
+  ApiClient -[#blue]-> LLMProviders
+  ConfigManager -[#blue]-> ModelRegistry
+  Transformers -[#blue]-> ExternalAI
+}
+
+package "Knowledge Base" {
+  database "Alert-Incident Correlations" as Correlations {
+    [Historical Mappings]
+    [Pattern Library]
+    [Fingerprint Repository]
+  }
+  
+  database "Resolution Knowledge" as ResolutionKB {
+    [Resolution Steps]
+    [Workflow Templates]
+    [Root Cause Patterns]
+  }
+  
+  database "Context Repository" as ContextRepo {
+    [Topology Context]
+    [Performance Baselines]
+    [Alert History]
+  }
+  
+  database "Vector Embeddings" as VectorDB {
+    [Incident Embeddings]
+    [Alert Embeddings]
+    [Resolution Embeddings]
+  }
+}
+
+package "Knowledge Capture" {
+  component "Resolution Analyzer" as ResolutionAnalyzer
+  component "Active Learning Pipeline" as LearningPipeline
+  component "Feedback Collector" as FeedbackCollector
+  component "Knowledge Indexer" as KnowledgeIndexer
+}
+
+package "Knowledge Retrieval" {
+  component "Similarity Search" as SimilaritySearch
+  component "Root Cause Analyzer" as RootCauseAnalyzer
+  component "Suggestion Engine" as SuggestionEngine
+  component "Knowledge Graph" as KnowledgeGraph
+}
+
+package "User Interfaces" {
+  component "AI Plugin Configuration" as AIPluginConfig
+  component "Knowledge Explorer" as KnowledgeExplorer
+  component "Incident Assistant" as IncidentAssistant
+  component "Feedback Interface" as FeedbackInterface
+}
+
+' Connect the packages
+LLMProviders -[#blue]-> KnowledgeExtraction
+ResolutionAnalyzer <-[#red]- CorrelationEngine : uses models
+LearningPipeline -[#blue]-> Transformers : trains
+FeedbackCollector -[#blue]-> LearningPipeline : provides data
+
+ResolutionAnalyzer -[#blue]-> ResolutionKB : updates
+KnowledgeIndexer -[#blue]-> VectorDB : populates
+KnowledgeIndexer -[#blue]-> Correlations : indexes
+
+SimilaritySearch -[#blue]-> VectorDB : queries
+RootCauseAnalyzer -[#blue]-> Correlations : analyzes
+SuggestionEngine -[#blue]-> ResolutionKB : retrieves
+KnowledgeGraph -[#blue]-> ContextRepo : incorporates
+
+AIPluginConfig -[#blue]-> ConfigManager : configures
+KnowledgeExplorer -[#blue]-> KnowledgeGraph : displays
+IncidentAssistant -[#blue]-> SuggestionEngine : presents
+FeedbackInterface -[#blue]-> FeedbackCollector : captures
+
+' External System Integrations
+interface "LLM API Services" as LLMApi
+interface "User Interface" as UI
+interface "Incident Management" as IMSystem
+interface "Alert Processing" as AlertSystem
+
+LLMApi -- LLMProviders
+UI -- UserInterfaces
+IMSystem -- ResolutionAnalyzer
+IMSystem -- IncidentAssistant
+AlertSystem -- CorrelationEngine
+
+' Notes
+note bottom of ExternalAI
+  Extensible framework for
+  integrating with different
+  AI/LLM services
+end note
+
+note right of VectorDB
+  High-performance vector database
+  for semantic search of knowledge
+end note
+
+note bottom of LearningPipeline
+  Continuously improves models
+  through user feedback and
+  new incident data
+end note
+
+note right of SuggestionEngine
+  Confidence-scored suggestions
+  based on historical incidents
+  and resolution patterns
+end note
+
+@enduml 

@@ -1,0 +1,171 @@
+@startuml Data_Retention_Flow
+
+title Keep AIOps Platform - Data Retention Flow
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "External\nMonitoring" as External
+participant "API\nEndpoint" as API
+participant "Alert\nProcessor" as Processor
+participant "SQL\nDatabase" as SQL
+participant "Elasticsearch" as ES
+participant "Archive\nStorage" as Archive
+participant "Retention\nJob" as RetentionJob
+
+== Alert Ingestion (Real-time) ==
+
+External -> API: Send alert data
+activate API
+
+API -> Processor: Process alert
+activate Processor
+
+Processor -> SQL: Store alert in Alert table
+activate SQL
+SQL --> Processor: Alert stored
+deactivate SQL
+
+Processor -> SQL: Update LastAlert table
+activate SQL
+SQL --> Processor: LastAlert updated
+deactivate SQL
+
+alt Elasticsearch enabled
+    Processor -> ES: Index alert
+    activate ES
+    ES --> Processor: Alert indexed
+    deactivate ES
+end
+
+Processor --> API: Processing complete
+deactivate Processor
+
+API --> External: 202 Accepted
+deactivate API
+
+== Alert Querying (Real-time) ==
+
+actor "User" as User
+User -> API: Query recent alerts
+activate API
+
+API -> SQL: Query LastAlert + Alert tables
+activate SQL
+SQL --> API: Recent alert data
+deactivate SQL
+
+API --> User: Display alerts
+deactivate API
+
+User -> API: Search historical alerts
+activate API
+
+API -> ES: Query Elasticsearch
+activate ES
+ES --> API: Historical alert data
+deactivate ES
+
+API --> User: Display historical alerts
+deactivate API
+
+== Data Retention (Scheduled) ==
+
+box "Scheduled Job" #LightBlue
+    participant "Retention\nJob" as RetentionJob
+end box
+
+RetentionJob -> RetentionJob: Start scheduled retention job
+activate RetentionJob
+
+note right of RetentionJob
+  Runs on configurable schedule
+  (daily, weekly, etc.)
+end note
+
+== Phase 1: Database Cleanup ==
+
+RetentionJob -> SQL: Identify alerts older than DB retention period
+activate SQL
+SQL --> RetentionJob: Alerts to archive
+deactivate SQL
+
+alt Archive before delete
+    RetentionJob -> ES: Verify alerts exist in Elasticsearch
+    activate ES
+    ES --> RetentionJob: Verification result
+    deactivate ES
+end
+
+RetentionJob -> SQL: Delete old alerts from Alert table
+activate SQL
+SQL --> RetentionJob: Alerts deleted
+deactivate SQL
+
+RetentionJob -> SQL: Clean up orphaned LastAlert entries
+activate SQL
+SQL --> RetentionJob: LastAlert entries cleaned
+deactivate SQL
+
+== Phase 2: Elasticsearch Index Management ==
+
+RetentionJob -> ES: Identify indices older than ES retention period
+activate ES
+ES --> RetentionJob: Old indices
+deactivate ES
+
+alt Archive before delete
+    RetentionJob -> Archive: Archive old indices
+    activate Archive
+    Archive --> RetentionJob: Indices archived
+    deactivate Archive
+end
+
+RetentionJob -> ES: Delete old indices
+activate ES
+ES --> RetentionJob: Indices deleted
+deactivate ES
+
+RetentionJob -> RetentionJob: Job complete
+deactivate RetentionJob
+
+== Index Optimization (Scheduled) ==
+
+box "Maintenance Job" #LightGreen
+    participant "Index\nOptimization" as IndexOpt
+end box
+
+IndexOpt -> ES: Optimize indices (merge, force merge)
+activate ES
+ES --> IndexOpt: Optimization complete
+deactivate ES
+
+== Archiving Implementation (Optional) ==
+
+box "Archiving Job" #LightPink
+    participant "Archive\nJob" as ArchiveJob
+end box
+
+ArchiveJob -> Archive: Set retention policy
+activate Archive
+Archive --> ArchiveJob: Policy set
+deactivate Archive
+
+ArchiveJob -> Archive: Lifecycle transitions (hot→cold→glacier)
+activate Archive
+Archive --> ArchiveJob: Lifecycle transitions complete
+deactivate Archive
+
+note over API, Archive
+  Data flows from hot storage (SQL Database)
+  to warm storage (Elasticsearch)
+  to cold storage (Archive)
+  based on configurable retention policies
+end note
+
+@enduml 

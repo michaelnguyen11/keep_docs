@@ -1,0 +1,158 @@
+@startuml System_Administration_Architecture
+
+title Keep AIOps Platform - System Administration Architecture
+
+!theme plain
+skinparam linetype ortho
+skinparam ComponentBackgroundColor WhiteSmoke
+skinparam ComponentBorderColor Black
+skinparam InterfaceBackgroundColor WhiteSmoke
+skinparam InterfaceBorderColor Black
+skinparam PackageBackgroundColor AliceBlue
+skinparam PackageBorderColor Black
+skinparam ArrowColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' Define top-level components
+package "Configuration Management" {
+  component "Environment Config" as EnvConfig
+  component "Configuration Files" as ConfigFiles
+  component "Tenant Configuration" as TenantConfig {
+    database "TenantConfiguration" as TenantConfigDB
+  }
+  component "Settings API" as SettingsAPI {
+    component "SMTP Config" as SMTPConfig
+    component "API Key Management" as APIKeyMgmt
+    component "SSO Config" as SSOConfig
+    component "Webhook Config" as WebhookConfig
+  }
+  
+  EnvConfig -(0- ConfigFiles
+  ConfigFiles -(0- TenantConfig
+  TenantConfig -(0- SettingsAPI
+}
+
+package "User & Role Management" {
+  component "Identity Management" as IdentityMgmt {
+    component "Auth0 / Keycloak" as ExternalIdP
+    component "Local User Provider" as LocalUser
+  }
+  component "RBAC System" as RBAC {
+    component "Admin Role" as AdminRole
+    component "NOC Role" as NOCRole
+    component "Webhook Role" as WebhookRole
+    component "Workflow Runner Role" as WorkflowRole
+  }
+  component "API Authentication" as APIAuth {
+    component "API Key" as APIKey
+    component "JWT Auth" as JWTAuth
+  }
+  
+  IdentityMgmt -(0- RBAC
+  IdentityMgmt -(0- APIAuth
+}
+
+package "System Health Monitoring" {
+  component "Health Check API" as HealthAPI
+  component "Component Status" as ComponentStatus {
+    component "Database Health" as DBHealth
+    component "Worker Health" as WorkerHealth
+    component "API Health" as ApiHealth
+  }
+  component "Performance Metrics" as PerfMetrics {
+    component "Ingestion Rate" as IngestionRate
+    component "Correlation Latency" as CorrelationLatency
+    component "API Response Time" as ApiResponseTime
+  }
+  component "System Table" as SystemTable
+  
+  HealthAPI -(0- ComponentStatus
+  ComponentStatus -(0- PerfMetrics
+  PerfMetrics -(0- SystemTable
+}
+
+package "Logging & Auditing" {
+  component "Logger Configuration" as LoggerConfig
+  component "Specialized Loggers" as SpecialLoggers {
+    component "WorkflowDBHandler" as WorkflowLogger
+    component "ProviderDBHandler" as ProviderLogger
+    component "WorkflowContextFilter" as ContextFilter
+  }
+  component "Log Storage" as LogStorage {
+    database "Database Logs" as DBLogs
+    component "External Logs" as ExternalLogs
+  }
+  component "Audit Trail" as AuditTrail
+  
+  LoggerConfig -(0- SpecialLoggers
+  SpecialLoggers -(0- LogStorage
+  LogStorage -(0- AuditTrail
+}
+
+package "Scaling Options" {
+  component "Horizontal Scaling" as HorizontalScaling {
+    component "Kubernetes Deployment" as K8sDeploy
+    component "Microservice Architecture" as Microservices
+  }
+  component "Vertical Scaling" as VerticalScaling {
+    component "Resource Allocation" as Resources
+    component "Database Optimization" as DBOptimization
+  }
+  component "Data Volume Management" as DataVolume {
+    component "Tiered Storage" as TieredStorage
+    component "Retention Policies" as RetentionPolicies
+  }
+  
+  HorizontalScaling -(0- VerticalScaling
+  VerticalScaling -(0- DataVolume
+}
+
+' Define relationships between packages
+SettingsAPI ..> RBAC : requires
+IdentityMgmt ..> TenantConfig : uses
+HealthAPI ..> ComponentStatus : monitors
+TenantConfig ..> SystemTable : stores in
+LogStorage ..> SystemTable : writes to
+DataVolume ..> SystemTable : reads from
+RetentionPolicies ..> LogStorage : manages
+APIAuth ..> APIKeyMgmt : uses
+
+' External interfaces
+interface "Admin UI" as AdminUI
+interface "API Endpoints" as APIEndpoints
+interface "Kubernetes API" as K8sAPI
+interface "Cloud Provider API" as CloudAPI
+
+AdminUI -- SettingsAPI
+AdminUI -- IdentityMgmt
+AdminUI -- HealthAPI
+APIEndpoints -- SettingsAPI
+APIEndpoints -- HealthAPI
+K8sAPI -- HorizontalScaling
+CloudAPI -- DataVolume
+
+' Notes
+note right of TenantConfig
+  Singleton pattern with
+  configurable reload time
+end note
+
+note bottom of RBAC
+  Scope-based permissions:
+  {verb}:{resource}
+  e.g. read:alert, write:incident
+end note
+
+note right of RetentionPolicies
+  Configurable per tenant
+  with hot/warm/cold tiers
+end note
+
+note right of K8sDeploy
+  Horizontal Pod Autoscalers
+  for dynamic scaling based
+  on CPU/memory usage
+end note
+
+@enduml 

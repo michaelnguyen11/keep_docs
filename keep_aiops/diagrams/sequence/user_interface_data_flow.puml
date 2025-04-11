@@ -1,0 +1,241 @@
+@startuml User_Interface_Data_Flow
+
+title Keep AIOps Platform - User Interface Data Flow
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "User" as User
+participant "Next.js\nApp Router" as Router
+participant "Page\nComponent" as Page
+participant "Alert/Incident\nList" as List
+participant "Filter\nSystem" as Filter
+participant "SWR\nCache" as Cache
+participant "API\nClient" as API
+participant "Backend\nServer" as Server
+participant "Database" as DB
+
+== Initial Page Load ==
+
+User -> Router: Navigate to alerts view
+activate Router
+
+Router -> Page: Server-side render
+activate Page
+
+Page -> API: Initial data request (SSR)
+activate API
+
+API -> Server: Request alerts with pagination
+activate Server
+
+Server -> DB: Query alerts
+activate DB
+DB --> Server: Return alerts
+deactivate DB
+
+Server --> API: JSON response
+deactivate Server
+
+API --> Page: Initial data
+deactivate API
+
+Page -> List: Render with initial data
+activate List
+
+List -> Filter: Initialize with facets
+activate Filter
+Filter --> List: Facet controls ready
+deactivate Filter
+
+Page --> Router: Rendered page
+deactivate Page
+
+Router --> User: Display page
+deactivate Router
+deactivate List
+
+note right of Router
+  Server-Side Rendering provides
+  initial data without client wait
+end note
+
+== User Interactions ==
+
+User -> Filter: Apply filter
+activate Filter
+
+Filter -> List: Update filter state
+activate List
+
+List -> Cache: Check for cached data
+activate Cache
+Cache --> List: Cache miss
+deactivate Cache
+
+List -> API: Request filtered data
+activate API
+
+API -> Server: Request with filter params
+activate Server
+
+Server -> DB: Filtered query
+activate DB
+DB --> Server: Filtered results
+deactivate DB
+
+Server --> API: JSON response
+deactivate Server
+
+API -> Cache: Update cache
+activate Cache
+Cache --> API: Cache updated
+deactivate Cache
+
+API --> List: Return filtered data
+deactivate API
+
+List -> List: Re-render with new data
+List --> User: Display filtered results
+deactivate List
+
+note right of Cache
+  SWR caching reduces duplicate 
+  requests and improves performance
+end note
+
+== Real-time Updates ==
+
+User -> List: Enable live updates
+activate List
+
+List -> List: Start polling interval
+activate List #lightblue
+
+loop Every 30 seconds
+  List -> API: Poll for updates
+  activate API
+  
+  API -> Server: Request latest data
+  activate Server
+  
+  Server -> DB: Query with timestamp filter
+  activate DB
+  DB --> Server: Only new/changed data
+  deactivate DB
+  
+  Server --> API: Incremental updates
+  deactivate Server
+  
+  API -> Cache: Merge with cached data
+  activate Cache
+  Cache --> API: Updated dataset
+  deactivate Cache
+  
+  API --> List: Deliver updates
+  deactivate API
+  
+  List -> List: Merge updates without full re-render
+end
+
+User -> List: Disable live updates
+List -> List: Stop polling
+deactivate List #lightblue
+
+deactivate List
+
+note right of List
+  Polling with incremental updates
+  maintains UI responsiveness while
+  keeping data current
+end note
+
+== Detail View ==
+
+User -> List: Select alert/incident
+activate List
+
+List -> Router: Navigate to detail view
+activate Router
+
+Router -> Page: Load detail page
+activate Page
+
+Page -> API: Request full details
+activate API
+
+API -> Server: Get complete data
+activate Server
+
+Server -> DB: Query all related data
+activate DB
+DB --> Server: Complete data
+deactivate DB
+
+Server --> API: Complete dataset
+deactivate Server
+
+API -> Cache: Cache detailed view
+activate Cache
+Cache --> API: Cached
+deactivate Cache
+
+API --> Page: Return detailed data
+deactivate API
+
+Page --> Router: Render detail view
+deactivate Page
+
+Router --> User: Display detailed info
+deactivate Router
+deactivate List
+
+note right of Page
+  Detail view prefetches all 
+  related data for responsiveness
+end note
+
+== Bulk Actions ==
+
+User -> List: Select multiple items
+activate List
+
+User -> List: Perform bulk action
+List -> API: Request bulk operation
+activate API
+
+API -> Server: Send bulk action
+activate Server
+
+Server -> DB: Process batch update
+activate DB
+DB --> Server: Confirmation
+deactivate DB
+
+Server --> API: Success response
+deactivate Server
+
+API -> Cache: Invalidate affected data
+activate Cache
+Cache --> API: Cache updated
+deactivate Cache
+
+API --> List: Operation complete
+deactivate API
+
+List -> List: Update UI optimistically
+List --> User: Show success confirmation
+deactivate List
+
+note right of List
+  Optimistic UI updates make
+  the interface feel responsive
+  even before server confirmation
+end note
+
+@enduml 

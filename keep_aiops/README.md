@@ -157,6 +157,90 @@ We have aligned the Alert Ingestion & Processing module documentation with the a
 
 These improvements ensure our documentation accurately reflects the system's capabilities for handling 600GB/day of logs, events, and alerts.
 
+### Alert Correlation Engine
+We have documented the Alert Correlation Engine module to align with the source code implementation. The following updates were made:
+
+1. **Created Comprehensive Documentation**:
+   - Detailed the [Alert Correlation Engine](ALERT_CORRELATION_ENGINE.md) architecture and components
+   - Documented the CEL-based rule evaluation system
+   - Explained the fingerprinting mechanism for alert grouping
+   - Outlined the incident creation logic and workflow
+
+2. **Aligned Diagrams with Implementation**:
+   - Verified that class diagrams match the actual code structure in `RulesEngine`
+   - Ensured sequence diagrams accurately reflect the correlation process
+   - Confirmed C4 component diagrams correctly represent system relationships
+
+3. **Added Implementation Details**:
+   - Documented key classes like `Rule`, `RulesEngine`, and CEL integration
+   - Detailed the multi-level grouping functionality
+   - Described the dynamic incident naming system
+   - Explained performance optimizations for high-volume environments
+
+4. **Covered Advanced Features**:
+   - Documented rule types (condition-based, time-based, topology-based)
+   - Explained resolution logic options (FIRST, LAST, ALL, NEVER)
+   - Detailed incident creation conditions (ANY, ALL)
+   - Described template-based naming with variable substitution
+
+These improvements provide a clear understanding of how the Alert Correlation Engine groups related alerts into meaningful incidents, which is essential for effective high-volume incident management.
+
+### Incident Management
+We have documented the Incident Management module to align with the source code implementation. The following updates were made:
+
+1. **Created Comprehensive Documentation**:
+   - Detailed the [Incident Management](INCIDENT_MANAGEMENT.md) architecture and components
+   - Documented the incident lifecycle from creation to resolution
+   - Explained the incident data model and relationships
+   - Described the incident reporting and analytics capabilities
+
+2. **Aligned Diagrams with Implementation**:
+   - Verified that class diagrams match the actual code structure in `IncidentBl` and `Incident`
+   - Ensured sequence diagrams accurately reflect the incident lifecycle
+   - Confirmed C4 component diagrams correctly represent system integration points
+
+3. **Added Implementation Details**:
+   - Documented key classes like `Incident`, `IncidentStatus`, and `IncidentBl`
+   - Detailed the merge incident functionality
+   - Described the resolution logic options
+   - Explained WebSocket-based notification system
+   - Outlined the workflow integration for automation
+
+4. **Covered Performance Optimizations**:
+   - Documented database schema optimizations for high-volume environments
+   - Explained the async processing for incident operations
+   - Detailed caching strategies for incident data
+   - Described the LastAlertToIncident table for performance
+
+These improvements provide a clear understanding of the complete incident lifecycle, from creation through correlation to resolution, enabling effective management of incidents in high-volume environments.
+
+### ML-Based Anomaly Detection
+We have documented the ML-Based Anomaly Detection module to align with the source code implementation. The following updates were made:
+
+1. **Created Comprehensive Documentation**:
+   - Detailed the [ML-Based Anomaly Detection](ML_BASED_ANOMALY_DETECTION.md) architecture and components
+   - Documented class structures and relationships
+   - Described workflows for model training, inference, and feedback collection
+   - Outlined performance optimizations for high-volume environments
+
+2. **Aligned Diagrams with Implementation**:
+   - Verified that class diagrams match the actual code structure
+   - Ensured sequence diagrams accurately reflect the processing flow
+   - Confirmed C4 component diagrams show correct relationships
+
+3. **Added Implementation Details**:
+   - Documented key classes like `ExternalAI`, `AISuggestion`, and `TransformersCorrelation`
+   - Described the OpenAI integration for intelligent suggestions
+   - Detailed the feedback collection system for continuous model improvement
+   - Explained caching and deduplication strategies for performance
+
+4. **Highlighted API Endpoints**:
+   - Documented the `/ai/suggest` and `/ai/{suggestion_id}/commit` endpoints
+   - Explained the request/response flow for AI-powered incident suggestions
+   - Detailed the feedback submission process
+
+These improvements provide a clear understanding of the ML-Based Anomaly Detection module's architecture, implementation, and integration with other Keep AIOps components.
+
 ## Next Steps
 
 Continue working through the Core Modules Checklist, aligning the documentation with source code implementation for each module. 

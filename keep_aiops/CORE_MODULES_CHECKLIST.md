@@ -52,6 +52,8 @@ This checklist outlines the core Keep modules that need to be thoroughly underst
   - [x] Expression preprocessing
   - [x] Optimization for CEL evaluation
 
+See detailed documentation in [ALERT_CORRELATION_ENGINE.md](ALERT_CORRELATION_ENGINE.md) and diagrams in the `diagrams` directory.
+
 ## 3. Incident Management
 - [x] Incident creation logic from correlated alerts
   - [x] Incident model initialization from alerts
@@ -77,6 +79,8 @@ This checklist outlines the core Keep modules that need to be thoroughly underst
   - [x] Integration with workflow engine
   - [x] Time-based escalation triggers
   - [x] Notification tier management
+
+See detailed documentation in [INCIDENT_MANAGEMENT.md](INCIDENT_MANAGEMENT.md) and diagrams in the `diagrams` directory.
 
 ## 4. ML-Based Anomaly Detection
 - [x] Machine learning model architecture
@@ -104,51 +108,177 @@ This checklist outlines the core Keep modules that need to be thoroughly underst
   - [x] Tenant-specific model customization
   - [x] Continuous model evaluation
 
+See detailed documentation in [ML_BASED_ANOMALY_DETECTION.md](ML_BASED_ANOMALY_DETECTION.md) and diagrams in the `diagrams` directory.
+
 ## 5. Workflow Automation
-- [ ] Workflow definition interface and schema
-- [ ] Workflow execution engine
-- [ ] Integration with external systems
-- [ ] Error handling and retry mechanisms
-- [ ] Workflow templating capabilities
-- [ ] Conditional execution paths
+- [x] Workflow definition interface and schema
+  - [x] YAML-based workflow definition format
+  - [x] Support for steps, actions, triggers, and conditions
+  - [x] Permission-based access control
+- [x] Workflow execution engine
+  - [x] ThreadPoolExecutor-based execution
+  - [x] Support for scheduled, manual, and event-based triggers
+  - [x] Context management for workflow execution
+- [x] Integration with external systems
+  - [x] Provider-based architecture for extensibility
+  - [x] Support for various provider types (console, Slack, etc.)
+  - [x] Secret management for provider credentials
+- [x] Error handling and retry mechanisms
+  - [x] Configurable workflow strategies (NONPARALLEL, NONPARALLEL_WITH_RETRY, PARALLEL)
+  - [x] On-failure step execution
+  - [x] Retry configuration for steps
+- [x] Workflow templating capabilities
+  - [x] Pre-built workflow templates
+  - [x] Support for reusable workflow components
+  - [x] Import/export functionality
+- [x] Conditional execution paths
+  - [x] Condition evaluation with multiple condition types
+  - [x] Foreach loops for processing collections
+  - [x] Continue flags for controlling execution flow
 
 ## 6. Integration Framework
-- [ ] Available API endpoints and authentication
-- [ ] Webhook integration capabilities
-- [ ] Custom integration development approach
-- [ ] Data transformation mechanisms
-- [ ] Rate limiting and throttling mechanisms
-- [ ] Integration health monitoring
+- [x] Available API endpoints and authentication
+  - [x] Webhook endpoints (`/alerts/event` and `/alerts/event/{provider_type}`)
+  - [x] API key and basic authentication support
+  - [x] OAuth integration for supported providers
+- [x] Webhook integration capabilities
+  - [x] Generic webhook support for any alert format
+  - [x] Provider-specific webhook adapters
+  - [x] Automatic webhook setup for compatible systems
+- [x] Custom integration development approach
+  - [x] Provider-based architecture
+  - [x] Standardized interfaces (BaseProvider classes)
+  - [x] Plugin system for extensibility
+- [x] Data transformation mechanisms
+  - [x] Provider-specific alert formatters
+  - [x] Alert normalization and standardization
+  - [x] Fingerprinting for deduplication
+- [x] Rate limiting and throttling mechanisms
+  - [x] Step-level throttling in workflows
+  - [x] Provider-level rate limiting
+  - [x] Configurable retry policies
+- [x] Integration health monitoring
+  - [x] Provider status checks
+  - [x] Alert error logging
+  - [x] Provider health reporting
 
 ## 7. Data Storage & Retention
-- [ ] Database schema and relationships
-- [ ] Indexing strategy for fast queries
-- [ ] Data retention policies and implementation
-- [ ] Archiving mechanisms for historical data
-- [ ] Query optimization for reporting
-- [ ] Backup and recovery procedures
+- [x] Database schema and relationships
+  - [x] Relational database models for active data (Alert, Incident, etc.)
+  - [x] Association tables for many-to-many relationships
+  - [x] LastAlert pattern for performance optimization
+  - [x] Soft delete mechanisms for historical relationships
+- [x] Indexing strategy for fast queries
+  - [x] Composite indexes for common query patterns
+  - [x] Filtered indexes for specific query scenarios
+  - [x] Timestamp-based indexes for time range queries
+  - [x] Tenant-based partitioning
+- [x] Data retention policies and implementation
+  - [x] Tiered storage approach (hot, warm, cold)
+  - [x] Configurable retention periods
+  - [x] Automatic cleanup processes
+  - [x] Data archiving before deletion
+- [x] Archiving mechanisms for historical data
+  - [x] Elasticsearch integration for historical alerts
+  - [x] Index lifecycle management
+  - [x] Optional archiving to cold storage (S3)
+  - [x] Tenant-specific archiving policies
+- [x] Query optimization for reporting
+  - [x] Specialized views for common report types
+  - [x] Elasticsearch for complex historical queries
+  - [x] Efficient pagination for large result sets
+  - [x] Caching for frequently accessed data
+- [x] Backup and recovery procedures
+  - [x] Database point-in-time recovery
+  - [x] Elasticsearch snapshot mechanism
+  - [x] Incremental backup strategies
+  - [x] Geographic replication options
 
 ## 8. User Interface
-- [ ] Alert and incident visualization
-- [ ] Dashboard and reporting capabilities
-- [ ] User workflow and navigation patterns
-- [ ] Customization options
-- [ ] Performance with large datasets
+- [x] Alert and incident visualization
+  - [x] Alerts table with server-side pagination and sorting
+  - [x] Dynamic column generation based on alert data
+  - [x] Virtualized rendering for large datasets
+  - [x] Advanced CEL-based filtering capabilities
+- [x] Dashboard and reporting capabilities
+  - [x] Overview dashboard with key metrics
+  - [x] Customizable widgets and layouts
+  - [x] Performance optimized visualizations
+  - [x] Time-range selection for historical data
+- [x] User workflow and navigation patterns
+  - [x] Feature-Slice Design architecture
+  - [x] Contextual actions based on data state
+  - [x] Optimistic UI updates for responsiveness
+  - [x] Keyboard shortcuts for power users
+- [x] Customization options
+  - [x] User-configurable table columns
+  - [x] Saved views and filters as presets
+  - [x] Customizable time and list formats
+  - [x] Theme customization with dark mode support
+- [x] Performance with large datasets
+  - [x] Server-side rendering for initial page load
+  - [x] Incremental loading for paged data
+  - [x] SWR caching for efficient data reuse
+  - [x] Live updates with selective re-rendering
 
 ## 9. System Administration
-- [ ] Configuration management
-- [ ] User and role management
-- [ ] System health monitoring
-- [ ] Performance tuning parameters
-- [ ] Logging and auditing
-- [ ] Scaling options for high-volume environments
+- [x] Configuration management
+  - [x] Environment variable and file-based configuration
+  - [x] Tenant-specific configuration with reload mechanism
+  - [x] Settings API for programmatic configuration
+  - [x] Secure storage for sensitive configuration
+- [x] User and role management
+  - [x] Role-based access control with scope system
+  - [x] Predefined roles (Admin, NOC, Webhook, WorkflowRunner)
+  - [x] Identity provider integration (Auth0, Keycloak)
+  - [x] API key management for service authentication
+- [x] System health monitoring
+  - [x] Health check endpoints for component status
+  - [x] Performance metrics for key operations
+  - [x] Worker process monitoring
+  - [x] System status dashboard
+- [x] Performance tuning parameters
+  - [x] Database connection pooling and optimization
+  - [x] Worker process configuration
+  - [x] Queue management settings
+  - [x] Caching parameters
+- [x] Logging and auditing
+  - [x] Centralized logging with JSON formatting
+  - [x] Specialized loggers for workflows and providers
+  - [x] Log level configuration
+  - [x] Comprehensive audit trail
+- [x] Scaling options for high-volume environments
+  - [x] Kubernetes deployment with HPA
+  - [x] Microservice architecture for independent scaling
+  - [x] Tiered storage for efficient data management
+  - [x] Vertical scaling recommendations
 
 ## 10. Knowledge Management
-- [ ] Knowledge base structure and organization
-- [ ] Integration with incident resolution
-- [ ] Search and retrieval mechanisms
-- [ ] Knowledge capture from resolved incidents
-- [ ] Suggestion engine for similar incidents
+- [x] Knowledge base structure and organization
+  - [x] Alert-incident correlation history
+  - [x] Resolution workflow repository
+  - [x] Semantic vector embeddings for similarity search
+  - [x] Contextual enrichment data
+- [x] Integration with incident resolution
+  - [x] Similar incident suggestion with confidence scoring
+  - [x] Historical resolution recommendations
+  - [x] Knowledge-enriched automation workflows
+  - [x] One-click application of known solutions
+- [x] Search and retrieval mechanisms
+  - [x] Semantic similarity search with vector embeddings
+  - [x] Contextual understanding of alert descriptions
+  - [x] Multi-dimensional clustering of incident types
+  - [x] Time-based pattern recognition
+- [x] Knowledge capture from resolved incidents
+  - [x] Automated extraction from resolution workflows
+  - [x] LLM-based summarization of incident handling
+  - [x] Key action and decision point identification
+  - [x] Active learning from user feedback
+- [x] LLM-powered suggestion engine
+  - [x] External AI framework for LLM integration
+  - [x] Transformer-based correlation models
+  - [x] On-premises and cloud LLM provider support
+  - [x] Air-gap compatibility for secure environments
 
 ## 11. Performance Considerations
 - [ ] Bottlenecks in the data pipeline

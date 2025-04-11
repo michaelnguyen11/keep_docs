@@ -1,0 +1,142 @@
+@startuml User_Interface_Architecture
+
+title Keep AIOps Platform - User Interface Architecture
+
+!theme plain
+skinparam linetype ortho
+skinparam ComponentBackgroundColor WhiteSmoke
+skinparam ComponentBorderColor Black
+skinparam PackageBackgroundColor AliceBlue
+skinparam PackageBorderColor Black
+skinparam ArrowColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' Definition of layers according to Feature-Slice Design
+package "App Layer (Next.js Routes)" {
+  component "Dashboard" as dashboard
+  component "Alerts View" as alerts_view
+  component "Incidents View" as incidents_view
+  component "Incident Details" as incident_details
+  component "Workflows" as workflows_view
+  component "Settings" as settings_view
+  component "Topology" as topology_view
+  component "Global Layout" as global_layout
+
+  global_layout -down-> dashboard
+  global_layout -down-> alerts_view
+  global_layout -down-> incidents_view
+  global_layout -down-> incident_details
+  global_layout -down-> workflows_view
+  global_layout -down-> settings_view
+  global_layout -down-> topology_view
+}
+
+package "Widgets Layer (Complex UI Components)" {
+  component "Alerts Table" as alerts_table {
+    component "Table Headers" as table_headers
+    component "Table Body" as table_body
+    component "Table Pagination" as table_pagination
+    component "Table Actions" as table_actions
+  }
+  
+  component "Incident List" as incident_list
+  component "Workflow Builder" as workflow_builder {
+    component "YAML Editor" as yaml_editor
+    component "Visual Builder" as visual_builder
+    component "Execution Logs" as execution_logs
+  }
+}
+
+package "Features Layer (User Scenarios)" {
+  component "Alert Actions" as alert_actions {
+    component "Alert History" as alert_history
+    component "Alert Notes" as alert_notes
+    component "Alert Enrichment" as alert_enrichment
+  }
+  
+  component "Incident Management" as incident_management {
+    component "Incident Creation" as incident_creation
+    component "Incident Timeline" as incident_timeline
+    component "Incident Activity" as incident_activity
+  }
+  
+  component "Filter System" as filter_system {
+    component "Faceted Filters" as faceted_filters
+    component "Filter Presets" as filter_presets
+    component "CEL Query Builder" as cel_query_builder
+  }
+}
+
+package "Entities Layer (Business Logic)" {
+  component "Alert Models" as alert_models
+  component "Incident Models" as incident_models
+  component "User Models" as user_models
+  component "Workflow Models" as workflow_models
+}
+
+package "Shared Layer (Reusable Components)" {
+  component "UI Components" as ui_components {
+    component "Buttons" as buttons
+    component "Inputs" as inputs
+    component "Cards" as cards
+    component "Modal Dialogs" as modals
+  }
+  
+  component "API Client" as api_client
+  component "Utility Functions" as utility_functions
+}
+
+' Relationships between layers
+alerts_view .[#blue]down.> alerts_table : uses
+incidents_view .[#blue]down.> incident_list : uses
+workflows_view .[#blue]down.> workflow_builder : uses
+
+alerts_table .[#blue]down.> alert_actions : uses
+alerts_table .[#blue]down.> filter_system : uses
+incident_list .[#blue]down.> incident_management : uses
+incident_list .[#blue]down.> filter_system : uses
+workflow_builder .[#blue]down.> workflow_models : uses
+
+alert_actions .[#blue]down.> alert_models : uses
+incident_management .[#blue]down.> incident_models : uses
+filter_system .[#blue]down.> alert_models : uses
+filter_system .[#blue]down.> incident_models : uses
+
+alert_models .[#blue]down.> api_client : uses
+incident_models .[#blue]down.> api_client : uses
+user_models .[#blue]down.> api_client : uses
+workflow_models .[#blue]down.> api_client : uses
+
+alerts_table .[#red]down.> ui_components : uses
+incident_list .[#red]down.> ui_components : uses
+workflow_builder .[#red]down.> ui_components : uses
+alert_actions .[#red]down.> ui_components : uses
+incident_management .[#red]down.> ui_components : uses
+filter_system .[#red]down.> ui_components : uses
+
+' Notes
+note right of api_client
+  Abstracts server API calls
+  with type-safe interfaces
+end note
+
+note left of alerts_table
+  Optimized for high-volume data
+  with server-side pagination
+  and virtualized rendering
+end note
+
+note right of filter_system
+  CEL query support for
+  advanced filtering with
+  SQL-like capabilities
+end note
+
+note bottom of ui_components
+  Reusable theme-consistent
+  components using Tailwind
+  and Tremor
+end note
+
+@enduml 

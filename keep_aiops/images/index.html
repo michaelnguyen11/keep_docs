@@ -1,21 +1,98 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Keep AIOps Platform - Diagrams</title>
+    <title>Keep AIOps - Diagrams</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; max-width: 1200px; margin: 0 auto; padding: 20px; }
         h1 { color: #333; }
         h2 { color: #555; margin-top: 30px; }
         .diagram { margin-bottom: 30px; }
         .diagram img { max-width: 100%; border: 1px solid #ddd; }
         .diagram p { font-style: italic; color: #666; }
+        .back-link { margin-bottom: 20px; }
+        .nav-links { margin-bottom: 30px; }
+        .nav-links a { 
+            display: inline-block; 
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+        .nav-links a:hover { background-color: #45a049; }
+        .module-links { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .module-card {
+            width: 48%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .module-card h3 { margin-top: 0; }
+        .module-card a {
+            display: inline-block;
+            margin: 5px 5px 5px 0;
+            padding: 8px 12px;
+            background-color: #3f51b5;
+            color: white;
+            text-decoration: none;
+            font-size: 12px;
+            border-radius: 5px;
+        }
+        .module-card a:hover { background-color: #303f9f; }
     </style>
 </head>
 <body>
-    <h1>Keep AIOps Platform - Architecture Diagrams</h1>
+    <div class="nav-links">
+        <a href="../../index.html">Main Documentation</a>
+        <a href="../../images/index.html">All Diagrams</a>
+        <a href="../README.md">Keep AIOps Documentation</a>
+        <a href="../CORE_MODULES_CHECKLIST.md">Core Modules Checklist</a>
+    </div>
+    
+    <h1>Keep AIOps - Architecture Diagrams</h1>
+    
+    <div class="module-links">
+        <div class="module-card">
+            <h3>Alert Ingestion & Processing</h3>
+            <a href="../ALERT_INGESTION_PROCESSING.md">Documentation</a>
+            <a href="alert_processing_sequence.png">Sequence Diagram</a>
+            <a href="alert_incident_class_diagram.png">Class Diagram</a>
+        </div>
+        <div class="module-card">
+            <h3>Alert Correlation Engine</h3>
+            <a href="../ALERT_CORRELATION_ENGINE.md">Documentation</a>
+            <a href="correlation_sequence.png">Sequence Diagram</a>
+            <a href="correlation_class_diagram.png">Class Diagram</a>
+        </div>
+        <div class="module-card">
+            <h3>Incident Management</h3>
+            <a href="../INCIDENT_MANAGEMENT.md">Documentation</a>
+            <a href="incident_lifecycle_sequence.png">Sequence Diagram</a>
+            <a href="incident_management_class_diagram.png">Class Diagram</a>
+        </div>
+        <div class="module-card">
+            <h3>ML-Based Anomaly Detection</h3>
+            <a href="../ML_BASED_ANOMALY_DETECTION.md">Documentation</a>
+            <a href="ml_anomaly_detection_sequence.png">Sequence Diagram</a>
+            <a href="ml_anomaly_detection_class_diagram.png">Class Diagram</a>
+        </div>
+    </div>
     
     <h2>C4 Architecture Diagrams</h2>
     <div class="diagrams-section">
+        <div class="diagram">
+            <h3>Agentic Integration Detailed</h3>
+            <img src="C4_Agentic_Integration_Detailed.png" alt="Agentic Integration Detailed">
+        </div>
         <div class="diagram">
             <h3>Keep Component Correlation</h3>
             <img src="C4_Keep_Component_Correlation.png" alt="Keep Component Correlation">
@@ -32,45 +109,121 @@
             <h3>Keep Component ML</h3>
             <img src="C4_Keep_Component_ML.png" alt="Keep Component ML">
         </div>
+        <div class="diagram">
+            <h3>Keep Container Improved</h3>
+            <img src="C4_Keep_Container_Improved.png" alt="Keep Container Improved">
+        </div>
+        <div class="diagram">
+            <h3>Keep Context Improved</h3>
+            <img src="C4_Keep_Context_Improved.png" alt="Keep Context Improved">
+        </div>
     </div>
     
     <h2>Class Diagrams</h2>
     <div class="diagrams-section">
         <div class="diagram">
-            <h3>alert incident Class Diagram</h3>
-            <img src="alert_incident_class_diagram.png" alt="alert incident Class Diagram">
+            <h3>Alert Incident Class Diagram</h3>
+            <img src="Alert_Incident_Class_Diagram.png" alt="Alert Incident Class Diagram">
         </div>
         <div class="diagram">
-            <h3>correlation Class Diagram</h3>
-            <img src="correlation_class_diagram.png" alt="correlation Class Diagram">
+            <h3>Provider Class Diagram</h3>
+            <img src="Provider_Class_Diagram.png" alt="Provider Class Diagram">
         </div>
         <div class="diagram">
-            <h3>incident management Class Diagram</h3>
-            <img src="incident_management_class_diagram.png" alt="incident management Class Diagram">
+            <h3>Workflow Class Diagram</h3>
+            <img src="Workflow_Class_Diagram.png" alt="Workflow Class Diagram">
         </div>
         <div class="diagram">
-            <h3>ml anomaly detection Class Diagram</h3>
-            <img src="ml_anomaly_detection_class_diagram.png" alt="ml anomaly detection Class Diagram">
+            <h3>Workflow Class Diagram Updated</h3>
+            <img src="Workflow_Class_Diagram_Updated.png" alt="Workflow Class Diagram Updated">
+        </div>
+        <div class="diagram">
+            <h3>Correlation Class Diagram</h3>
+            <img src="correlation_class_diagram.png" alt="Correlation Class Diagram">
+        </div>
+        <div class="diagram">
+            <h3>Incident Management Class Diagram</h3>
+            <img src="incident_management_class_diagram.png" alt="Incident Management Class Diagram">
+        </div>
+        <div class="diagram">
+            <h3>ML Anomaly Detection Class Diagram</h3>
+            <img src="ml_anomaly_detection_class_diagram.png" alt="ML Anomaly Detection Class Diagram">
         </div>
     </div>
     
     <h2>Sequence Diagrams</h2>
     <div class="diagrams-section">
         <div class="diagram">
-            <h3>alert processing sequence</h3>
-            <img src="alert_processing_sequence.png" alt="alert processing sequence">
+            <h3>AI Enrichment Sequence</h3>
+            <img src="AI_Enrichment_Sequence.png" alt="AI Enrichment Sequence">
         </div>
         <div class="diagram">
-            <h3>correlation sequence</h3>
-            <img src="correlation_sequence.png" alt="correlation sequence">
+            <h3>Alert Processing Sequence</h3>
+            <img src="Alert_Processing_Sequence.png" alt="Alert Processing Sequence">
         </div>
         <div class="diagram">
-            <h3>incident lifecycle sequence</h3>
-            <img src="incident_lifecycle_sequence.png" alt="incident lifecycle sequence">
+            <h3>Workflow Execution Sequence</h3>
+            <img src="Workflow_Execution_Sequence.png" alt="Workflow Execution Sequence">
         </div>
         <div class="diagram">
-            <h3>ml anomaly detection sequence</h3>
-            <img src="ml_anomaly_detection_sequence.png" alt="ml anomaly detection sequence">
+            <h3>Workflow Execution Sequence Updated</h3>
+            <img src="Workflow_Execution_Sequence_Updated.png" alt="Workflow Execution Sequence Updated">
+        </div>
+        <div class="diagram">
+            <h3>Correlation Sequence</h3>
+            <img src="correlation_sequence.png" alt="Correlation Sequence">
+        </div>
+        <div class="diagram">
+            <h3>Incident Lifecycle Sequence</h3>
+            <img src="incident_lifecycle_sequence.png" alt="Incident Lifecycle Sequence">
+        </div>
+        <div class="diagram">
+            <h3>ML Anomaly Detection Sequence</h3>
+            <img src="ml_anomaly_detection_sequence.png" alt="ML Anomaly Detection Sequence">
+        </div>
+    </div>
+
+    <h2>Other Diagrams</h2>
+    <div class="diagrams-section">
+        <div class="diagram">
+            <h3>Data Retention Flow</h3>
+            <img src="Data_Retention_Flow.png" alt="Data Retention Flow">
+        </div>
+        <div class="diagram">
+            <h3>Data Storage Schema</h3>
+            <img src="Data_Storage_Schema.png" alt="Data Storage Schema">
+        </div>
+        <div class="diagram">
+            <h3>Integration Framework Alert Flow</h3>
+            <img src="Integration_Framework_Alert_Flow.png" alt="Integration Framework Alert Flow">
+        </div>
+        <div class="diagram">
+            <h3>Integration Framework Architecture</h3>
+            <img src="Integration_Framework_Architecture.png" alt="Integration Framework Architecture">
+        </div>
+        <div class="diagram">
+            <h3>Knowledge Management Architecture</h3>
+            <img src="Knowledge_Management_Architecture.png" alt="Knowledge Management Architecture">
+        </div>
+        <div class="diagram">
+            <h3>Knowledge Management Flow</h3>
+            <img src="Knowledge_Management_Flow.png" alt="Knowledge Management Flow">
+        </div>
+        <div class="diagram">
+            <h3>System Administration Architecture</h3>
+            <img src="System_Administration_Architecture.png" alt="System Administration Architecture">
+        </div>
+        <div class="diagram">
+            <h3>System Administration Flows</h3>
+            <img src="System_Administration_Flows.png" alt="System Administration Flows">
+        </div>
+        <div class="diagram">
+            <h3>User Interface Architecture</h3>
+            <img src="User_Interface_Architecture.png" alt="User Interface Architecture">
+        </div>
+        <div class="diagram">
+            <h3>User Interface Data Flow</h3>
+            <img src="User_Interface_Data_Flow.png" alt="User Interface Data Flow">
         </div>
     </div>
 </body>

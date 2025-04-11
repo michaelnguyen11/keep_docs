@@ -1,0 +1,313 @@
+@startuml Data_Storage_Schema
+
+title Keep AIOps Platform - Data Storage Schema
+
+!theme plain
+skinparam linetype ortho
+skinparam ClassBackgroundColor WhiteSmoke
+skinparam ClassBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+skinparam PackageBackgroundColor AliceBlue
+skinparam PackageBorderColor Black
+
+' Core Tables for Alert Management
+package "Alert Storage" {
+    class Alert {
+        +id: UUID
+        +tenant_id: str
+        +timestamp: datetime
+        +provider_type: str
+        +provider_id: str
+        +event: dict
+        +fingerprint: str
+        +alert_hash: str
+    }
+
+    class LastAlert {
+        +tenant_id: str
+        +fingerprint: str
+        +alert_id: UUID
+        +timestamp: datetime
+        +first_timestamp: datetime
+        +alert_hash: str
+    }
+
+    class AlertRaw {
+        +id: UUID
+        +tenant_id: str
+        +raw_alert: dict
+        +timestamp: datetime
+        +provider_type: str
+        +error: bool
+        +error_message: str
+        +dismissed: bool
+        +dismissed_at: datetime
+        +dismissed_by: str
+    }
+
+    class AlertEnrichment {
+        +id: UUID
+        +tenant_id: str
+        +timestamp: datetime
+        +alert_fingerprint: str
+        +enrichments: dict
+    }
+
+    class AlertDeduplicationRule {
+        +id: UUID
+        +tenant_id: str
+        +name: str
+        +description: str
+        +provider_id: str
+        +provider_type: str
+        +last_updated: datetime
+        +last_updated_by: str
+        +created_at: datetime
+        +created_by: str
+        +enabled: bool
+        +fingerprint_fields: list[str]
+        +full_deduplication: bool
+        +ignore_fields: list[str]
+        +priority: int
+        +is_provisioned: bool
+    }
+
+    class AlertDeduplicationEvent {
+        +id: UUID
+        +tenant_id: str
+        +timestamp: datetime
+        +deduplication_rule_id: UUID
+        +deduplication_type: str
+        +date_hour: datetime
+        +provider_id: str
+        +provider_type: str
+    }
+
+    class AlertAudit {
+        +id: UUID
+        +fingerprint: str
+        +tenant_id: str
+        +timestamp: datetime
+        +user_id: str
+        +action: str
+        +description: str
+    }
+}
+
+' Incident Management Tables
+package "Incident Management" {
+    class Incident {
+        +id: UUID
+        +tenant_id: str
+        +running_number: int
+        +user_generated_name: str
+        +ai_generated_name: str
+        +user_summary: str
+        +generated_summary: str
+        +assignee: str
+        +severity: int
+        +forced_severity: bool
+        +status: str
+        +creation_time: datetime
+        +start_time: datetime
+        +end_time: datetime
+        +last_seen_time: datetime
+        +is_predicted: bool
+        +is_candidate: bool
+        +is_visible: bool
+        +alerts_count: int
+        +affected_services: list
+        +sources: list
+        +rule_id: UUID
+        +rule_fingerprint: str
+        +fingerprint: str
+        +incident_type: str
+        +incident_application: UUID
+        +resolve_on: str
+        +same_incident_in_the_past_id: UUID
+        +merged_into_incident_id: UUID
+        +merged_at: datetime
+        +merged_by: str
+    }
+
+    class AlertToIncident {
+        +tenant_id: str
+        +timestamp: datetime
+        +alert_id: UUID
+        +incident_id: UUID
+        +is_created_by_ai: bool
+        +deleted_at: datetime
+    }
+
+    class LastAlertToIncident {
+        +tenant_id: str
+        +timestamp: datetime
+        +fingerprint: str
+        +incident_id: UUID
+        +is_created_by_ai: bool
+        +deleted_at: datetime
+    }
+}
+
+' Workflow and Rule Tables
+package "Rules and Workflows" {
+    class Rule {
+        +id: UUID
+        +tenant_id: str
+        +name: str
+        +timeframe: int
+        +timeunit: str
+        +definition: str
+        +definition_cel: str
+        +grouping_criteria: List[str]
+        +group_description: str
+        +require_approve: bool
+        +resolve_on: str
+        +create_on: str
+        +incident_name_template: str
+        +incident_prefix: str
+        +multi_level: bool
+        +multi_level_property_name: str
+        +created_at: datetime
+        +created_by: str
+        +updated_at: datetime
+        +updated_by: str
+    }
+
+    class Workflow {
+        +id: UUID
+        +tenant_id: str
+        +name: str
+        +description: str
+        +workflows_raw: str
+        +interval: int
+        +created_at: datetime
+        +created_by: str
+        +updated_at: datetime
+        +updated_by: str
+        +is_disabled: bool
+        +is_provisioned: bool
+        +provisioned_file: str
+        +provisioned_content_hash: str
+        +provisioned_info: dict
+    }
+
+    class WorkflowExecution {
+        +id: UUID
+        +tenant_id: str
+        +workflow_id: UUID
+        +execution_number: int
+        +execution_id: UUID
+        +triggered_by: str
+        +status: str
+        +start_time: datetime
+        +end_time: datetime
+        +error: str
+        +event_id: str
+        +event_type: str
+        +fingerprint: str
+        +test_run: bool
+    }
+}
+
+' Tenant and User Management
+package "Tenant Management" {
+    class Tenant {
+        +id: str
+        +name: str
+        +configuration: dict
+        +created_at: datetime
+    }
+
+    class TenantApiKey {
+        +id: UUID
+        +tenant_id: str
+        +name: str
+        +key: str
+        +created_at: datetime
+        +last_used: datetime
+    }
+
+    class User {
+        +id: UUID
+        +tenant_id: str
+        +username: str
+        +password: str
+        +role: str
+        +created_at: datetime
+        +last_sign_in: datetime
+    }
+}
+
+' External Storage
+package "External Storage" {
+    class ElasticSearch {
+        +alerts_index: str
+        +tenant_id: str
+        +enabled: bool
+        +index_alert()
+        +index_alerts()
+        +search_alerts()
+        +enrich_alert()
+    }
+}
+
+' Relationships
+Alert "1" --* "*" AlertEnrichment
+Alert "*" -- "1" Tenant
+LastAlert "*" -- "1" Alert
+AlertAudit "*" -- "1" Alert
+
+Incident "*" -- "1" Tenant
+Incident "*" -- "0..1" Rule
+Incident "0..1" -- "*" Incident : merged_incidents
+Incident "*" -- "0..1" Incident : same_incidents_in_the_future
+
+AlertToIncident "*" -- "1" Alert
+AlertToIncident "*" -- "1" Incident
+LastAlertToIncident "*" -- "1" LastAlert
+LastAlertToIncident "*" -- "1" Incident
+
+Rule "*" -- "1" Tenant
+Workflow "*" -- "1" Tenant
+WorkflowExecution "*" -- "1" Workflow
+
+User "*" -- "1" Tenant
+TenantApiKey "*" -- "1" Tenant
+
+' Notes
+note right of Alert
+  Main storage for alert data
+  JSON event field contains 
+  full alert details
+end note
+
+note right of LastAlert
+  Optimized table for retrieving
+  the most recent alert for
+  a given fingerprint
+end note
+
+note right of Incident
+  Correlated group of alerts
+  Created by rules, AI, or manually
+end note
+
+note right of ElasticSearch
+  External storage for historical alerts
+  Used for search and analytics
+  Separate from the relational database
+end note
+
+note bottom of LastAlertToIncident
+  Performance optimization for
+  querying active incidents
+end note
+
+note bottom of AlertDeduplicationRule
+  Controls how alerts are
+  deduplicated in the system
+end note
+
+@enduml 
