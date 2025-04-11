@@ -13,39 +13,39 @@ This document outlines a focused 4-week Proof of Concept timeline for demonstrat
 ## Team Composition
 
 - **1 AI Expert**: Architecture, LLM integration, and technical leadership
-- **2 Junior AI Engineers**: Development support, data preparation, testing
+- **2 AI Engineers**: Development support, data preparation, testing
 
 ## Week 1: Setup & Architecture
 
 | Day | Activities | Team Allocation | Deliverables |
 |-----|------------|-----------------|--------------|
-| 1-2 | - Environment setup<br>- Keep platform installation<br>- Architecture design | AI Expert (100%)<br>Junior Engineers (100%) | - Working development environment<br>- Basic Keep installation<br>- PoC architecture diagram |
-| 3-4 | - Sample data preparation<br>- Test datasets creation<br>- API exploration | AI Expert (70%)<br>Junior Engineers (100%) | - Test dataset<br>- API documentation<br>- Data flow diagrams |
-| 5 | - Component design<br>- Interface definitions<br>- Mock service creation | AI Expert (100%)<br>Junior Engineers (100%) | - Component specifications<br>- Interface contracts<br>- Working mock services |
+| 1-2 | - Environment setup<br>- Keep platform installation<br>- Architecture design | AI Expert (100%)<br>Engineers (100%) | - Working development environment<br>- Basic Keep installation<br>- PoC architecture diagram |
+| 3-4 | - Sample data preparation<br>- Test datasets creation<br>- API exploration | AI Expert (70%)<br>Engineers (100%) | - Test dataset<br>- API documentation<br>- Data flow diagrams |
+| 5 | - Component design<br>- Interface definitions<br>- Mock service creation | AI Expert (100%)<br>Engineers (100%) | - Component specifications<br>- Interface contracts<br>- Working mock services |
 
 ## Week 2: Core Integration
 
 | Day | Activities | Team Allocation | Deliverables |
 |-----|------------|-----------------|--------------|
-| 1-2 | - Simplified log filtering mechanism<br>- Basic preprocessing pipeline<br>- Data transformation | AI Expert (70%)<br>Junior Engineers (100%) | - Working log filter<br>- Preprocessing pipeline<br>- Data transformer |
-| 3-4 | - Agent provider interface<br>- LLM integration (using existing models)<br>- Basic tool registry | AI Expert (100%)<br>Junior Engineers (100%) | - Agent provider prototype<br>- LLM connection<br>- Tool registry skeleton |
-| 5 | - Integration testing<br>- Data flow validation<br>- Performance baseline | AI Expert (70%)<br>Junior Engineers (100%) | - Integration test results<br>- Working data flow<br>- Performance metrics |
+| 1-2 | - Simplified log filtering mechanism<br>- Basic preprocessing pipeline<br>- Data transformation | AI Expert (70%)<br>Engineers (100%) | - Working log filter<br>- Preprocessing pipeline<br>- Data transformer |
+| 3-4 | - Agent provider interface<br>- LLM integration (using existing models)<br>- Basic tool registry | AI Expert (100%)<br>Engineers (100%) | - Agent provider prototype<br>- LLM connection<br>- Tool registry skeleton |
+| 5 | - Integration testing<br>- Data flow validation<br>- Performance baseline | AI Expert (70%)<br>Engineers (100%) | - Integration test results<br>- Working data flow<br>- Performance metrics |
 
 ## Week 3: Agent Development
 
 | Day | Activities | Team Allocation | Deliverables |
 |-----|------------|-----------------|--------------|
-| 1-2 | - Orchestrator agent implementation<br>- Prompt engineering<br>- Context assembly | AI Expert (100%)<br>Junior Engineers (100%) | - Basic orchestrator agent<br>- Optimized prompts<br>- Context assembly module |
-| 3-4 | - One specialized agent implementation<br>- Incident analysis capabilities<br>- LLM response formatting | AI Expert (100%)<br>Junior Engineers (100%) | - Specialized agent prototype<br>- Analysis capability demo<br>- Formatted LLM outputs |
-| 5 | - Agent communication<br>- Result validation<br>- Error handling | AI Expert (80%)<br>Junior Engineers (100%) | - Inter-agent communication<br>- Validation protocols<br>- Basic error handling |
+| 1-2 | - Orchestrator agent implementation<br>- Prompt engineering<br>- Context assembly | AI Expert (100%)<br>Engineers (100%) | - Basic orchestrator agent<br>- Optimized prompts<br>- Context assembly module |
+| 3-4 | - One specialized agent implementation<br>- Incident analysis capabilities<br>- LLM response formatting | AI Expert (100%)<br>Engineers (100%) | - Specialized agent prototype<br>- Analysis capability demo<br>- Formatted LLM outputs |
+| 5 | - Agent communication<br>- Result validation<br>- Error handling | AI Expert (80%)<br>Engineers (100%) | - Inter-agent communication<br>- Validation protocols<br>- Basic error handling |
 
 ## Week 4: UI & Demonstration
 
 | Day | Activities | Team Allocation | Deliverables |
 |-----|------------|-----------------|--------------|
-| 1-2 | - Basic UI integration<br>- Visualization of agent insights<br>- Demo scenario preparation | AI Expert (70%)<br>Junior Engineers (100%) | - UI prototype<br>- Visualization components<br>- Demo scenarios |
-| 3-4 | - End-to-end testing<br>- Performance optimization<br>- Documentation | AI Expert (100%)<br>Junior Engineers (100%) | - Test results<br>- Optimized performance<br>- Technical documentation |
-| 5 | - Demo preparation<br>- Presentation materials<br>- Future roadmap | AI Expert (100%)<br>Junior Engineers (100%) | - Working demonstration<br>- Presentation deck<br>- Proposed roadmap |
+| 1-2 | - Basic UI integration<br>- Visualization of agent insights<br>- Demo scenario preparation | AI Expert (70%)<br>Engineers (100%) | - UI prototype<br>- Visualization components<br>- Demo scenarios |
+| 3-4 | - End-to-end testing<br>- Performance optimization<br>- Documentation | AI Expert (100%)<br>Engineers (100%) | - Test results<br>- Optimized performance<br>- Technical documentation |
+| 5 | - Demo preparation<br>- Presentation materials<br>- Future roadmap | AI Expert (100%)<br>Engineers (100%) | - Working demonstration<br>- Presentation deck<br>- Proposed roadmap |
 
 ## Scope Limitations (PoC vs. Production)
 

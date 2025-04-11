@@ -3,7 +3,7 @@
 This document outlines specific development tasks to modify the Keep alert ingestion and processing module to handle high-volume environments (~600GB/day).
 
 ## Task 1: Redis Queue Implementation
-**Assigned to**: [Junior Developer 1]  
+**Assigned to**: [Developer 1]  
 **Estimated time**: 3-4 days
 
 1. Enable Redis as the default queue system:
@@ -22,7 +22,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Create a queue health check endpoint
 
 ## Task 2: Worker Pool Optimization
-**Assigned to**: [Junior Developer 2]  
+**Assigned to**: [Developer 2]  
 **Estimated time**: 2-3 days
 
 1. Scale ThreadPoolExecutor for high volume:
@@ -41,7 +41,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Implement alerts for slow workers
 
 ## Task 3: Elasticsearch Integration for Historical Alerts
-**Assigned to**: [Junior Developer 3]  
+**Assigned to**: [Developer 3]  
 **Estimated time**: 3-4 days
 
 1. Implement Elasticsearch archiving:
@@ -60,7 +60,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Add result merging and deduplication
 
 ## Task 4: Alert Deduplication Enhancement
-**Assigned to**: [Junior Developer 4]  
+**Assigned to**: [Developer 4]  
 **Estimated time**: 2-3 days
 
 1. Improve fingerprinting algorithm:
@@ -79,7 +79,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Implement alerts for unusual deduplication patterns
 
 ## Task 5: Alert Database Schema Optimization
-**Assigned to**: [Junior Developer 5]  
+**Assigned to**: [Developer 5]  
 **Estimated time**: 3-4 days
 
 1. Optimize the alert table:
@@ -98,7 +98,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Create a migration script for existing alerts
 
 ## Task 6: Batch Processing Pipeline
-**Assigned to**: [Junior Developer 6]  
+**Assigned to**: [Developer 6]  
 **Estimated time**: 4-5 days
 
 1. Implement batch alert processing:
@@ -117,7 +117,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Add advisory locks for concurrent batch processing
 
 ## Task 7: Performance Testing Infrastructure
-**Assigned to**: [Junior Developer 7]  
+**Assigned to**: [Developer 7]  
 **Estimated time**: 3-4 days
 
 1. Create load testing scripts:
@@ -136,7 +136,7 @@ This document outlines specific development tasks to modify the Keep alert inges
    - Add alerts for performance degradation
 
 ## Task 8: Provider Throttling & Backpressure
-**Assigned to**: [Junior Developer 8]  
+**Assigned to**: [Developer 8]  
 **Estimated time**: 2-3 days
 
 1. Implement provider rate limiting:

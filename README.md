@@ -2,6 +2,11 @@
 
 This directory has been reorganized to separate the documentation of the current Keep AIOps Platform from the planned Agentic AI integration.
 
+## Open documents on Web Browser
+```bash
+open index.html
+```
+
 ## New Organization Structure
 
 The documentation is now organized into two main sections:
@@ -22,7 +27,7 @@ Documentation about the planned integration of Agentic AI capabilities with Keep
 - Implementation timelines
 - Executive summaries
 
-## For Junior Team Members
+## For Team Members
 
 If you're new to the team or need a more concrete understanding of the codebase:
 

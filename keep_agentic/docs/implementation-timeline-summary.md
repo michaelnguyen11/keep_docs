@@ -4,7 +4,7 @@ This document provides a high-level overview of the implementation timeline for 
 
 ## Project Overview
 
-- **Team**: 3 members (1 AI Expert, 2 Junior AI Engineers)
+- **Team**: 3 members (1 AI Expert, 2 AI Engineers)
 - **Duration**: 11 months (44 weeks)
 - **Primary Goal**: Integrate Agentic AI capabilities with Keep to handle 600GB+ daily log volume
 

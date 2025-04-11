@@ -4,7 +4,7 @@ This document provides a high-level overview of the 4-week Proof of Concept time
 
 ## PoC Overview
 
-- **Team**: 3 members (1 AI Expert, 2 Junior AI Engineers)
+- **Team**: 3 members (1 AI Expert, 2 AI Engineers)
 - **Duration**: 4 weeks (20 business days)
 - **Primary Goal**: Demonstrate the feasibility of integrating Keep with Agentic AI for high-volume log processing
 

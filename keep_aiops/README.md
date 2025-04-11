@@ -8,14 +8,14 @@ We've created a [Core Modules Checklist](CORE_MODULES_CHECKLIST.md) to track our
 
 ## Implementation Tasks
 
-We've developed specific implementation tasks for junior developers to enhance the Keep platform:
+We've developed specific implementation tasks for developers to enhance the Keep platform:
 
 - [Alert Module Tasks](ALERT_MODULE_TASKS.md) - Detailed tasks for modifying the alert ingestion and processing module to handle 600GB/day volumes
-- [Junior Developer Guide](JUNIOR_DEVELOPER_GUIDE.md) - Step-by-step guide for junior developers on how to approach and implement their tasks
+- [Developer Guide](DEVELOPER_GUIDE.md) - Step-by-step guide for developers on how to approach and implement their tasks
 
 ### Task Implementation Guidelines
 
-For junior developers, we've created detailed step-by-step implementation guidelines:
+For developers, we've created detailed step-by-step implementation guidelines:
 
 1. [Redis Queue Implementation Guide](task_guidelines/01_redis_queue_implementation.md) - Detailed guide for implementing Redis-based queues for high-volume alert processing
 2. [Worker Pool Optimization Guide](task_guidelines/02_worker_pool_optimization.md) - Guide for optimizing thread pools and worker management for alert processing
@@ -65,15 +65,15 @@ keep_aiops/
 ├── task_guidelines/       # Detailed implementation guides for tasks
 ├── CORE_MODULES_CHECKLIST.md  # Checklist of modules to understand and adapt
 ├── ALERT_MODULE_TASKS.md  # Implementation tasks for alert module
-├── JUNIOR_DEVELOPER_GUIDE.md  # Guide for junior developers
+├── DEVELOPER_GUIDE.md  # Guide for developers
 └── README.md              # This file
 ```
 
-## For Junior Team Members
+## For Team Members
 
 If you're new to the team, follow these steps:
 
-1. Read the [Junior Developer Guide](JUNIOR_DEVELOPER_GUIDE.md) to understand how to approach your tasks
+1. Read the [Developer Guide](DEVELOPER_GUIDE.md) to understand how to approach your tasks
 2. Review the diagrams to understand the system architecture:
    - Start with the **Class Diagrams** to understand how our main data entities relate to each other
    - Review the **Sequence Diagrams** to see how these components interact to implement key workflows
@@ -121,10 +121,10 @@ Keep will be adapted to process and manage approximately 600GB/day of logs, even
   - **c4/** - C4 context, container, and component level diagrams
   - **class/** - Class diagrams for major components
   - **sequence/** - Sequence diagrams for key processes
-- **task_guidelines/** - Detailed implementation guides for junior developers
+- **task_guidelines/** - Detailed implementation guides for developers
 - **CORE_MODULES_CHECKLIST.md** - Detailed checklist of modules that need to be examined and potentially modified
-- **ALERT_MODULE_TASKS.md** - Implementation tasks for junior developers
-- **JUNIOR_DEVELOPER_GUIDE.md** - Guide for junior developers on implementing high-volume enhancements
+- **ALERT_MODULE_TASKS.md** - Implementation tasks for developers
+- **DEVELOPER_GUIDE.md** - Guide for developers on implementing high-volume enhancements
 
 ## Module Alignment Status
 
@@ -141,7 +141,7 @@ We have aligned the Alert Ingestion & Processing module documentation with the a
    - Sequence Diagram illustrates async processing flow with Redis queues
 
 3. **Created Implementation Tasks**:
-   - Defined specific development tasks for junior team members
+   - Defined specific development tasks for team members
    - Structured tasks to address all aspects of high-volume processing
    - Established dependencies and implementation guidelines
 
@@ -150,7 +150,7 @@ We have aligned the Alert Ingestion & Processing module documentation with the a
    - Provided testing scripts and common pitfall warnings
    - Added references to relevant documentation and best practices
 
-5. **Prepared Junior Developer Guide**:
+5. **Prepared Developer Guide**:
    - Created workflow recommendations for implementing tasks
    - Provided solutions for common challenges
    - Added final checklist for task completion
