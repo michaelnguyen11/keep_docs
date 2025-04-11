@@ -1,0 +1,100 @@
+@startuml alert_processing_sequence
+!theme plain
+skinparam SequenceMessageAlignment center
+
+title Alert Processing Sequence (High-Volume Architecture)
+
+actor "Monitoring Tool" as MonitoringTool
+participant "Alert API Endpoint" as AlertAPI
+participant "Alert Processor" as AlertProcessor
+participant "Alert Fingerprinter" as AlertFingerprinter
+participant "Redis Queue" as RedisQueue
+participant "Process Event Task" as ProcessEventTask
+participant "Alert Deduplicator" as AlertDeduplicator
+participant "Enrichment Engine" as EnrichmentEngine
+participant "Rules Engine" as RulesEngine
+participant "Alert Repository" as AlertRepository
+participant "Elasticsearch" as Elasticsearch
+participant "Workflow Manager" as WorkflowManager
+participant "WebSocket Server" as WSServer
+participant "UI Client" as UIClient
+
+== High-Volume Alert Ingestion ==
+
+MonitoringTool -> AlertAPI: POST /alerts/event with alert data
+activate AlertAPI
+
+AlertAPI -> AlertProcessor: Process alert data
+activate AlertProcessor
+
+AlertProcessor -> AlertFingerprinter: Generate fingerprint
+activate AlertFingerprinter
+AlertFingerprinter --> AlertProcessor: Return fingerprint
+deactivate AlertFingerprinter
+
+AlertProcessor -> RedisQueue: Enqueue alert with tenant_id, provider_type, fingerprint
+activate RedisQueue
+
+AlertAPI --> MonitoringTool: 202 Accepted (immediate acknowledgment)
+deactivate AlertAPI
+
+note right of RedisQueue
+  Queue acts as buffer during high-volume
+  alert storms (~600GB/day capacity)
+end note
+
+== Asynchronous Processing ==
+
+RedisQueue -> ProcessEventTask: Dequeue alert (process_event function)
+activate ProcessEventTask
+deactivate RedisQueue
+
+ProcessEventTask -> ProcessEventTask: Get provider class and format alert
+
+ProcessEventTask -> AlertDeduplicator: apply_deduplication(alert)
+activate AlertDeduplicator
+AlertDeduplicator -> AlertRepository: Query for similar alerts by fingerprint
+AlertDeduplicator -> AlertDeduplicator: Apply deduplication rules
+AlertDeduplicator -> AlertDeduplicator: Calculate hash and check for duplicates
+AlertDeduplicator --> ProcessEventTask: Return deduplication result (isFullDuplicate, isPartialDuplicate)
+deactivate AlertDeduplicator
+
+alt alert is duplicate
+    ProcessEventTask -> AlertRepository: Update existing alert (last_seen, count)
+else alert is new
+    ProcessEventTask -> EnrichmentEngine: Apply extraction rules
+    activate EnrichmentEngine
+    EnrichmentEngine --> ProcessEventTask: Return enriched alert
+    deactivate EnrichmentEngine
+    
+    ProcessEventTask -> AlertRepository: Save new alert to database
+end
+
+ProcessEventTask -> Elasticsearch: Index alert for historical storage
+activate Elasticsearch
+note right of Elasticsearch
+  Historical archive for 
+  high-volume storage with 
+  efficient search capabilities
+end note
+Elasticsearch --> ProcessEventTask: Confirm indexed
+deactivate Elasticsearch
+
+ProcessEventTask -> WSServer: Publish alert update event
+WSServer --> UIClient: Push real-time update
+
+ProcessEventTask -> RulesEngine: Run correlation rules
+activate RulesEngine
+RulesEngine -> RulesEngine: Apply user-defined rules
+RulesEngine -> RulesEngine: Check for incident creation conditions
+RulesEngine --> ProcessEventTask: Return incidents (if created)
+deactivate RulesEngine
+
+ProcessEventTask -> WorkflowManager: Add events to workflow queue
+activate WorkflowManager
+WorkflowManager --> ProcessEventTask: Acknowledge receipt
+deactivate WorkflowManager
+
+deactivate ProcessEventTask
+
+@enduml 

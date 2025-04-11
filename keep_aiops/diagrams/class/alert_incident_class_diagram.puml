@@ -1,0 +1,278 @@
+@startuml alert_incident_class_diagram
+!theme plain
+skinparam linetype ortho
+
+' Alert related classes
+class AlertDto {
+  alert_id: str
+  title: str
+  description: str
+  status: AlertStatus
+  severity: AlertSeverity
+  source: str
+  source_link: str
+  source_incident_id: str
+  fingerprint: str
+  isFullDuplicate: bool
+  isPartialDuplicate: bool
+  created_at: datetime
+  last_seen_at: datetime
+  first_seen_at: datetime
+  snoozed_until: datetime
+  tags: List[str]
+  environment: str
+  owner: str
+  team: str
+  metadata: Dict
+  alert_hash: str
+}
+
+enum AlertStatus {
+  NEW
+  ACKNOWLEDGED
+  RESOLVED
+  CLOSED
+  SNOOZED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+class AlertRaw {
+  raw_id: str
+  alert_id: str
+  data: Dict
+  provider: str
+  status: str
+  received_at: datetime
+  created_at: datetime
+}
+
+class LastAlert {
+  fingerprint: str
+  data: Dict
+  created_at: datetime
+  updated_at: datetime
+}
+
+' Alert Processing Components
+class ProcessEventTask {
+  process_event(ctx, tenant_id, provider_type, provider_id, fingerprint, api_key_name, trace_id, event, notify_client, timestamp_forced): List[Alert]
+  __handle_formatted_events(tenant_id, provider_type, session, raw_events, formatted_events, tracer, provider_id, notify_client, timestamp_forced, job_id)
+  __internal_preparation(alerts, fingerprint, api_key_name)
+}
+
+class AlertProcessor {
+  validate_alert(alert_data: Dict): bool
+  generate_fingerprint(alert_data: Dict): str
+  queue_alert(tenant_id: str, provider_type: str, alert_data: Dict, fingerprint: str): str
+}
+
+class AlertFingerprinter {
+  get_alert_fingerprint(alert_data: Dict, fields: List[str]): str
+  hash_alert(alert_data: Dict): str
+}
+
+class AlertDeduplicator {
+  DEDUPLICATION_DISTRIBUTION_ENABLED: bool
+  CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED: bool
+  
+  apply_deduplication(alert: AlertDto, rules: List[DeduplicationRuleDto], last_alert_fingerprint_to_hash: Dict): AlertDto
+  _apply_deduplication_rule(alert: AlertDto, rule: DeduplicationRuleDto, last_alert_fingerprint_to_hash: Dict): AlertDto
+  _remove_field(field: str, alert: AlertDto): AlertDto
+  get_deduplication_rules(tenant_id: str, provider_id: str, provider_type: str): List[DeduplicationRuleDto]
+  get_deduplication_fields(): Dict
+  get_deduplications(): List[DeduplicationRuleDto]
+}
+
+class DeduplicationRuleDto {
+  id: str
+  name: str
+  description: str
+  default: bool
+  fingerprint_fields: List[str]
+  provider_type: str
+  provider_id: str
+  full_deduplication: bool
+  ignore_fields: List[str]
+  priority: int
+  enabled: bool
+  ingested: int
+  dedup_ratio: float
+}
+
+class RedisQueueManager {
+  enqueue_alert(alert_data: Dict): str
+  get_queue_size(): int
+  dequeue_alert(timeout: int): (Dict, str)
+  clear_queue(): None
+}
+
+class ElasticClient {
+  enabled: bool
+  alerts_index: str
+  
+  index_alert(alert: AlertDto): None
+  index_alerts(alerts: List[AlertDto]): None
+  search_alerts(query_params: Dict, size: int, from_: int): Dict
+  get_alert_count(): int
+  archive_old_alerts(days: int): int
+  _model_to_dict(model): Dict
+}
+
+class AlertsBL {
+  get_alerts(query: Dict): List[AlertDto]
+  get_alert(alert_id: str): AlertDto
+  create_alert(alert: AlertDto): str
+  update_alert(alert_id: str, data: Dict): AlertDto
+  resolve_alert(alert_id: str): AlertDto
+  acknowledge_alert(alert_id: str): AlertDto
+  close_alert(alert_id: str): AlertDto
+  snooze_alert(alert_id: str, duration: int): AlertDto
+  add_tags(alert_id: str, tags: List[str]): AlertDto
+  remove_tags(alert_id: str, tags: List[str]): AlertDto
+}
+
+' Incident related classes
+class IncidentDto {
+  incident_id: str
+  title: str
+  description: str
+  status: IncidentStatus
+  severity: IncidentSeverity
+  created_at: datetime
+  updated_at: datetime
+  resolved_at: datetime
+  alerts: List[AlertDto]
+  tags: List[str]
+  environment: str
+  owner: str
+  team: str
+  metadata: Dict
+}
+
+enum IncidentStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+class IncidentsBL {
+  get_incidents(query: Dict): List[IncidentDto]
+  get_incident(incident_id: str): IncidentDto
+  create_incident(incident: IncidentDto): str
+  update_incident(incident_id: str, data: Dict): IncidentDto
+  resolve_incident(incident_id: str): IncidentDto
+  close_incident(incident_id: str): IncidentDto
+  add_alert_to_incident(incident_id: str, alert_id: str): IncidentDto
+  remove_alert_from_incident(incident_id: str, alert_id: str): IncidentDto
+  add_tags(incident_id: str, tags: List[str]): IncidentDto
+  remove_tags(incident_id: str, tags: List[str]): IncidentDto
+}
+
+' Correlation and Rules Engine
+class RulesEngine {
+  run_rules(alerts: List[AlertDto], session: Session): List[IncidentDto]
+  _apply_alert_rules(alerts: List[AlertDto]): List[AlertDto]
+  _apply_correlation_rules(alerts: List[AlertDto]): List[IncidentDto]
+}
+
+class CorrelationRule {
+  id: str
+  name: str
+  criteria: Dict
+  active: bool
+  created_at: datetime
+}
+
+' Provider Interface 
+class ProvidersFactory {
+  get_provider(context_manager, provider_id, provider_type, config): BaseProvider
+  get_provider_class(provider_type): Type[BaseProvider]
+  get_installed_providers(tenant_id): List[BaseProvider]
+  get_linked_providers(tenant_id): List[BaseProvider]
+  get_default_deduplication_rules(): List[DeduplicationRuleDto]
+}
+
+class BaseProvider {
+  format_alert(tenant_id, event, provider_id, provider_type): AlertDto
+  get_alerts_configuration(): List
+}
+
+' Database Layer
+class DatabaseAccessLayer {
+  get_session_sync(): Session
+  get_alerts_by_fingerprint(tenant_id, fingerprint): List[Alert]
+  get_last_alert_hashes_by_fingerprints(tenant_id, fingerprints): Dict[str, str]
+  enrich_alerts_with_incidents(tenant_id, alerts): List[Alert]
+  set_last_alert(tenant_id, fingerprint, alert_data): LastAlert
+}
+
+' Workflow Manager 
+class WorkflowManager {
+  get_instance(): WorkflowManager
+  insert_events(tenant_id: str, events: List[AlertDto]): None
+}
+
+' WebSocket Server
+class WebSocketServer {
+  publish_alert_update(tenant_id: str, alert: AlertDto): None
+  publish_incident_update(tenant_id: str, incident: IncidentDto): None
+}
+
+' Relationships
+AlertDto "1" -- "1" AlertStatus
+AlertDto "1" -- "1" AlertSeverity
+AlertDto "1" -- "0..1" AlertRaw
+
+IncidentDto "1" -- "1" IncidentStatus
+IncidentDto "1" -- "1" IncidentSeverity
+IncidentDto "1" -- "0..*" AlertDto
+
+' Alert Processing Flow
+ProcessEventTask -- AlertDeduplicator : "Uses"
+ProcessEventTask -- RedisQueueManager : "Pulls alerts from"
+ProcessEventTask -- ElasticClient : "Archives alerts to"
+ProcessEventTask -- WebSocketServer : "Publishes updates to"
+ProcessEventTask -- RulesEngine : "Runs correlation with"
+ProcessEventTask -- WorkflowManager : "Queues events to"
+ProcessEventTask -- BaseProvider : "Gets provider from" 
+ProcessEventTask -- DatabaseAccessLayer : "Stores alerts with"
+
+AlertProcessor -- AlertFingerprinter : "Uses"
+AlertProcessor -- RedisQueueManager : "Enqueues alerts with"
+
+AlertsBL -- AlertProcessor : "Uses"
+AlertsBL -- AlertDeduplicator : "Applies deduplication with"
+
+AlertDeduplicator -- DeduplicationRuleDto : "Uses"
+AlertDeduplicator -- ProvidersFactory : "Gets providers from"
+AlertDeduplicator -- DatabaseAccessLayer : "Queries alerts with"
+
+' Business Logic Relationships
+IncidentsBL -- RulesEngine : "Creates incidents via"
+IncidentsBL -- DatabaseAccessLayer : "Manages incidents with"
+IncidentsBL -- WebSocketServer : "Publishes updates via"
+
+RulesEngine -- CorrelationRule : "Applies"
+RulesEngine -- IncidentsBL : "Creates incidents via"
+
+' Data Flow Relationships
+ElasticClient -- AlertDto : "Indexes"
+DatabaseAccessLayer -- LastAlert : "Manages"
+DatabaseAccessLayer -- AlertDto : "Stores & retrieves"
+DatabaseAccessLayer -- IncidentDto : "Stores & retrieves"
+
+@enduml

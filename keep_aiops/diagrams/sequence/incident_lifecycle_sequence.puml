@@ -1,0 +1,164 @@
+@startuml incident_lifecycle_sequence
+!theme plain
+skinparam SequenceMessageAlignment center
+
+title Incident Lifecycle Sequence
+
+actor "User" as User
+participant "API Routes" as API
+participant "IncidentBl" as IncidentBl
+participant "DB" as DB
+participant "WorkflowManager" as WorkflowManager
+participant "RulesEngine" as RulesEngine
+participant "EnrichmentsBl" as EnrichmentsBl
+participant "WebSocket Server" as WSServer
+
+== Incident Creation from Correlation ==
+
+RulesEngine -> IncidentBl: Create incident from correlated alerts
+activate IncidentBl
+
+IncidentBl -> DB: Save incident
+DB --> IncidentBl: Return incident
+
+alt rule.require_approve=true
+    IncidentBl -> IncidentBl: Mark as candidate incident (is_candidate=true)
+else rule.require_approve=false
+    IncidentBl -> IncidentBl: Create as full incident (is_candidate=false)
+end
+
+IncidentBl -> WorkflowManager: send_workflow_event(incident, "created")
+WorkflowManager --> IncidentBl: Workflow triggered
+
+IncidentBl -> WSServer: Publish incident updates
+WSServer --> User: Notify of new incident
+
+IncidentBl --> RulesEngine: Return incident
+deactivate IncidentBl
+
+== Incident Assignment ==
+
+User -> API: Assign incident
+activate API
+
+API -> IncidentBl: assign_incident(incident_id, assignee)
+activate IncidentBl
+
+IncidentBl -> DB: Update incident assignee
+DB --> IncidentBl: Confirm update
+
+IncidentBl -> DB: Add audit log entry (ActionType.INCIDENT_ASSIGN)
+
+IncidentBl -> WSServer: Publish assignment update
+WSServer --> User: Notify of assignment change
+
+IncidentBl --> API: Return updated incident
+deactivate IncidentBl
+
+API --> User: Assignment confirmed
+deactivate API
+
+== Incident Acknowledgement ==
+
+User -> API: Acknowledge incident
+activate API
+
+API -> IncidentBl: change_status(incident_id, IncidentStatus.ACKNOWLEDGED)
+activate IncidentBl
+
+IncidentBl -> DB: Get incident with alerts
+DB --> IncidentBl: Return incident with alerts
+
+IncidentBl -> EnrichmentsBl: batch_enrich(alerts, status=ACKNOWLEDGED)
+activate EnrichmentsBl
+EnrichmentsBl -> DB: Update alert status
+EnrichmentsBl --> IncidentBl: Enrichment complete
+deactivate EnrichmentsBl
+
+IncidentBl -> DB: Update incident status
+DB --> IncidentBl: Confirm update
+
+IncidentBl -> DB: Add audit log entry (ActionType.INCIDENT_STATUS_CHANGE)
+
+IncidentBl -> WorkflowManager: send_workflow_event(incident, "updated")
+WorkflowManager --> IncidentBl: Workflow triggered
+
+IncidentBl -> WSServer: Publish status update
+WSServer --> User: Notify of status change
+
+IncidentBl --> API: Return updated incident
+deactivate IncidentBl
+
+API --> User: Acknowledgement confirmed
+deactivate API
+
+== Incident Resolution ==
+
+User -> API: Resolve incident
+activate API
+
+API -> IncidentBl: change_status(incident_id, IncidentStatus.RESOLVED)
+activate IncidentBl
+
+IncidentBl -> DB: Get incident with alerts
+DB --> IncidentBl: Return incident with alerts
+
+IncidentBl -> EnrichmentsBl: batch_enrich(alerts, status=RESOLVED)
+activate EnrichmentsBl
+EnrichmentsBl -> DB: Update alert status
+EnrichmentsBl --> IncidentBl: Enrichment complete
+deactivate EnrichmentsBl
+
+IncidentBl -> IncidentBl: Set incident end_time
+
+IncidentBl -> DB: Update incident status and end_time
+DB --> IncidentBl: Confirm update
+
+IncidentBl -> DB: Add audit log entry (ActionType.INCIDENT_STATUS_CHANGE)
+
+IncidentBl -> WorkflowManager: send_workflow_event(incident, "updated")
+WorkflowManager --> IncidentBl: Workflow triggered
+
+IncidentBl -> WSServer: Publish status update
+WSServer --> User: Notify of resolution
+
+IncidentBl --> API: Return updated incident
+deactivate IncidentBl
+
+API --> User: Resolution confirmed
+deactivate API
+
+== Merge Incidents ==
+
+User -> API: Merge incidents (source_id, target_id)
+activate API
+
+API -> IncidentBl: merge_incidents(source_id, target_id)
+activate IncidentBl
+
+IncidentBl -> DB: Get source and target incidents
+DB --> IncidentBl: Return incidents
+
+IncidentBl -> DB: Move alerts from source to target
+DB --> IncidentBl: Confirm move
+
+IncidentBl -> DB: Update source incident status to MERGED
+IncidentBl -> DB: Set merged_into_incident_id, merged_by, merged_at
+
+IncidentBl -> DB: Update target incident
+DB --> IncidentBl: Confirm update
+
+IncidentBl -> WSServer: Publish merge update
+WSServer --> User: Notify of merge
+
+IncidentBl -> WorkflowManager: send_workflow_event(source, "deleted")
+IncidentBl -> WorkflowManager: send_workflow_event(target, "updated")
+WorkflowManager --> IncidentBl: Workflows triggered
+
+IncidentBl --> API: Return updated target incident
+deactivate IncidentBl
+
+API --> User: Merge confirmed
+deactivate API
+
+@enduml 

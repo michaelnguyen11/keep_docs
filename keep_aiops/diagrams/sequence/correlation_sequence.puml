@@ -1,0 +1,103 @@
+@startuml correlation_sequence
+!theme plain
+skinparam SequenceMessageAlignment center
+
+title Alert Correlation Sequence
+
+participant "Alert Processor" as AlertProcessor
+participant "Process Event Task" as ProcessEventTask
+participant "RulesEngine" as RulesEngine
+participant "CEL Environment" as CELEnv
+participant "DB" as DB
+participant "IncidentBL" as IncidentBL
+participant "WebSocket Server" as WSServer
+participant "UI" as UI
+
+== Alert Correlation Process ==
+
+AlertProcessor -> ProcessEventTask: Process alerts
+activate ProcessEventTask
+
+ProcessEventTask -> RulesEngine: run_rules(alerts)
+activate RulesEngine
+
+RulesEngine -> DB: get_rules()
+DB --> RulesEngine: Return correlation rules
+
+loop For each rule
+    loop For each alert
+        RulesEngine -> RulesEngine: _check_if_rule_apply(rule, alert)
+        activate RulesEngine
+        
+        RulesEngine -> RulesEngine: _extract_subrules(rule.definition_cel)
+        
+        RulesEngine -> CELEnv: compile(CEL expression)
+        activate CELEnv
+        CELEnv --> RulesEngine: Return AST
+        
+        RulesEngine -> CELEnv: program(AST)
+        CELEnv --> RulesEngine: Return program
+        
+        RulesEngine -> CELEnv: evaluate(alert data)
+        CELEnv --> RulesEngine: Return match result
+        deactivate CELEnv
+        
+        alt Rule matches alert
+            RulesEngine -> RulesEngine: _calc_rule_fingerprint(alert, rule)
+            
+            alt Rule uses multi-level grouping (multi_level=true)
+                RulesEngine -> RulesEngine: Extract multiple fingerprints using multi_level_property_name
+            else Standard grouping
+                RulesEngine -> RulesEngine: Extract single fingerprint from grouping_criteria
+            end
+            
+            loop For each rule fingerprint
+                RulesEngine -> DB: _get_or_create_incident(rule, fingerprint, session, event)
+                alt Incident exists
+                    DB --> RulesEngine: Return existing incident
+                    RulesEngine -> DB: assign_alert_to_incident(fingerprint, incident)
+                else New incident needed
+                    RulesEngine -> DB: create_incident_for_grouping_rule(rule, fingerprint)
+                    DB --> RulesEngine: Return new incident
+                    RulesEngine -> DB: assign_alert_to_incident(fingerprint, incident)
+                    
+                    alt rule.create_on=="any" or all subrules match
+                        RulesEngine -> RulesEngine: Set incident.is_visible = True
+                    else Waiting for more matches
+                        RulesEngine -> RulesEngine: Keep incident.is_visible = False
+                    end
+                end
+            end
+        end
+        
+        deactivate RulesEngine
+    end
+end
+
+RulesEngine -> IncidentBL: Create/update incidents
+activate IncidentBL
+
+IncidentBL -> DB: Save incidents
+DB --> IncidentBL: Confirm save
+
+alt rule.require_approve=true
+    IncidentBL -> IncidentBL: Mark as candidate incident (is_candidate=true)
+else rule.require_approve=false
+    IncidentBL -> IncidentBL: Create as full incident (is_candidate=false)
+end
+
+IncidentBL -> IncidentBL: resolve_incident_if_require(incident)
+
+IncidentBL -> WSServer: Publish incident updates (created/updated event)
+WSServer --> UI: Push real-time updates
+
+IncidentBL --> RulesEngine: Return incidents
+deactivate IncidentBL
+
+RulesEngine --> ProcessEventTask: Return correlated incidents
+deactivate RulesEngine
+
+ProcessEventTask --> AlertProcessor: Processing complete
+deactivate ProcessEventTask
+
+@enduml 

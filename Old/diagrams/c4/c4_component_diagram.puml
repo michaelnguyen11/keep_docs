@@ -1,0 +1,93 @@
+@startuml C4_Components
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for Keep API
+
+Container_Boundary(api, "Keep API") {
+    Component(routeHandlers, "API Route Handlers", "FastAPI Routers", "Exposes REST API endpoints for alerts, incidents, workflows, etc.")
+    
+    Component(alertsController, "Alerts Controller", "Python", "Manages alert processing, deduplication, and enrichment")
+    Component(incidentsController, "Incidents Controller", "Python", "Manages incident creation, updates, and lifecycle")
+    Component(workflowController, "Workflow Controller", "Python", "Manages workflow definition, scheduling, and execution")
+    Component(providersController, "Providers Controller", "Python", "Manages provider configuration and connectivity")
+    
+    Component(rulesEngine, "Rules Engine", "Python, CEL", "Evaluates rules for alert correlation and incident creation")
+    Component(workflowEngine, "Workflow Engine", "Python", "Executes workflow steps and actions")
+    
+    Component(providerSystem, "Provider System", "Python", "Manages integrations with external systems")
+    Component(contextManager, "Context Manager", "Python", "Manages context across workflow execution")
+    
+    Component(authService, "Authentication Service", "Python", "Handles user authentication and authorization")
+    Component(secretsService, "Secrets Service", "Python", "Manages secure access to provider credentials")
+    
+    Component(dataAccess, "Data Access Layer", "SQLModel/SQLAlchemy", "Provides ORM-based access to the database")
+    
+    Component(eventBus, "Event Bus", "Python", "Manages event publishing for real-time updates")
+    
+    Component(aiManager, "AI Manager", "Python", "Orchestrates AI operations and provider interactions")
+}
+
+Container(webApp, "Keep UI", "TypeScript, Next.js", "Web application")
+Container(wsServer, "WebSocket Server", "Soketi", "Real-time updates")
+Container(database, "Database", "PostgreSQL/MySQL/SQLite/SQL Server", "Data storage")
+Container(backgroundTasks, "Background Tasks", "ARQ", "Async processing")
+
+System_Ext(observabilityTools, "Observability Tools", "Alert sources")
+System_Ext(ticketingSystems, "Ticketing Systems", "Incident tracking")
+System_Ext(communicationChannels, "Communication Channels", "Notifications")
+System_Ext(aiServices, "AI Services", "LLM and embedding providers")
+
+' Frontend to API interactions
+Rel(webApp, routeHandlers, "Makes API calls to", "HTTPS/JSON")
+Rel(routeHandlers, eventBus, "Publishes events via")
+Rel(eventBus, wsServer, "Sends updates to")
+
+' Route handlers to controllers
+Rel(routeHandlers, authService, "Authenticates requests via")
+Rel(routeHandlers, alertsController, "Delegates alert operations to")
+Rel(routeHandlers, incidentsController, "Delegates incident operations to")
+Rel(routeHandlers, workflowController, "Delegates workflow operations to")
+Rel(routeHandlers, providersController, "Delegates provider operations to")
+
+' Controller relationships
+Rel(alertsController, rulesEngine, "Uses for correlation")
+Rel(alertsController, dataAccess, "Persists via")
+Rel(incidentsController, dataAccess, "Persists via")
+Rel(workflowController, workflowEngine, "Delegates execution to")
+Rel(workflowController, dataAccess, "Persists via")
+Rel(providersController, providerSystem, "Manages")
+Rel(providersController, dataAccess, "Persists via")
+
+' Engine relationships
+Rel(workflowEngine, contextManager, "Maintains context with")
+Rel(workflowEngine, providerSystem, "Executes actions via")
+Rel(workflowEngine, backgroundTasks, "Schedules tasks via")
+Rel(rulesEngine, providerSystem, "Enriches data via")
+
+' Provider system
+Rel(providerSystem, secretsService, "Retrieves credentials from")
+Rel(providerSystem, observabilityTools, "Interacts with")
+Rel(providerSystem, ticketingSystems, "Interacts with")
+Rel(providerSystem, communicationChannels, "Interacts with")
+Rel(providerSystem, aiServices, "Interacts with")
+
+' AI Manager relationships
+Rel(workflowEngine, aiManager, "Uses for AI operations")
+Rel(rulesEngine, aiManager, "Uses for correlation")
+Rel(providerSystem, aiManager, "Routes AI requests via")
+Rel(aiManager, aiServices, "Makes requests to")
+
+' Data access
+Rel(dataAccess, database, "Reads from and writes to")
+Rel(secretsService, database, "Stores encrypted data in")
+
+' Background tasks
+Rel(workflowEngine, backgroundTasks, "Schedules jobs on")
+Rel(backgroundTasks, dataAccess, "Reads/writes via")
+
+' External systems to API
+Rel_Left(observabilityTools, routeHandlers, "Sends alerts to", "Webhooks")
+
+@enduml 

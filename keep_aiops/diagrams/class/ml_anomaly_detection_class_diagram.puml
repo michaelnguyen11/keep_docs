@@ -1,0 +1,172 @@
+@startuml ml_anomaly_detection_class_diagram
+!theme plain
+skinparam linetype ortho
+
+' AI/ML Model Classes
+class ExternalAI {
+  name: str
+  description: str
+  version: int
+  api_url: str
+  api_key: str
+  config_default: Json
+  
+  unique_id(): str
+}
+
+class ExternalAIConfigAndMetadata {
+  id: str
+  algorithm_id: str
+  tenant_id: str
+  settings: str
+  settings_proposed_by_algorithm: str
+  feedback_logs: str
+  
+  algorithm: ExternalAI
+  from_external_ai(tenant_id: str, algorithm: ExternalAI): ExternalAIConfigAndMetadata
+}
+
+class AISuggestion {
+  id: UUID
+  tenant_id: str
+  user_id: str
+  suggestion_input: Dict
+  suggestion_input_hash: str
+  suggestion_type: AISuggestionType
+  suggestion_content: Dict
+  model: str
+  created_at: datetime
+  
+  feedbacks: List[AIFeedback]
+}
+
+enum AISuggestionType {
+  INCIDENT_SUGGESTION
+  SUMMARY_GENERATION
+  OTHER
+}
+
+class AIFeedback {
+  id: UUID
+  suggestion_id: UUID
+  user_id: str
+  feedback_content: str
+  rating: int
+  comment: str
+  created_at: datetime
+  updated_at: datetime
+  
+  suggestion: AISuggestion
+}
+
+' Data Transfer Objects
+class ExternalAIDto {
+  name: str
+  description: str
+  last_time_reminded: datetime
+  api_url: str
+  api_key: str
+  
+  from_orm(object: ExternalAI): ExternalAIDto
+  remind_about_the_client(tenant_id: str): None
+}
+
+class ExternalAIConfigAndMetadataDto {
+  id: str
+  algorithm_id: str
+  tenant_id: str
+  settings: list[Any]
+  settings_proposed_by_algorithm: list[Any]
+  feedback_logs: str
+  algorithm: ExternalAIDto
+  
+  from_orm(object: ExternalAIConfigAndMetadata): ExternalAIConfigAndMetadataDto
+}
+
+class IncidentClustering {
+  incidents: List[IncidentCandidate]
+}
+
+class IncidentCandidate {
+  incident_name: str
+  alerts: List[int]
+  reasoning: str
+  confidence_score: float
+  confidence_explanation: str
+  severity: str
+  recommended_actions: List[str]
+}
+
+class IncidentsClusteringSuggestion {
+  incident_suggestion: List[IncidentDto]
+  suggestion_id: str
+}
+
+' Business Logic Classes
+class AISuggestionBl {
+  tenant_id: str
+  session: Session
+  _client: OpenAI
+  logger: Logger
+  
+  get_suggestion_by_input(suggestion_input: Dict): Optional[AISuggestion]
+  hash_suggestion_input(suggestion_input: Dict): str
+  add_suggestion(user_id: str, suggestion_input: Dict, suggestion_type: AISuggestionType, suggestion_content: Dict, model: str): AISuggestion
+  add_feedback(suggestion_id: UUID, user_id: str, feedback_content: str, rating: int, comment: str): AIFeedback
+  get_feedback(suggestion_type: AISuggestionType): List[AIFeedback]
+  suggest_incidents(alerts_dto: List[AlertDto], topology_data: List[TopologyServiceDtoOut], user_id: str): IncidentsClusteringSuggestion
+  commit_incidents(suggestion_id: UUID, incidents_with_feedback: List[Dict], user_id: str, incident_bl: IncidentBl): List[IncidentDto]
+  _prepare_prompts(alerts_dto: List[AlertDto], topology_data: List[TopologyServiceDtoOut]): Tuple[str, str]
+  _get_ai_completion(system_prompt: str, user_prompt: str)
+  _process_incidents(incidents: List[IncidentCandidate], alerts_dto: List[AlertDto]): List[IncidentDto]
+}
+
+' External AI Transformer Correlation
+class TransformersCorrelation {
+  api_url: str
+  api_key: str
+  
+  train(tenant_id: str, historical_data: Dict): Dict
+  evaluate(tenant_id: str, test_data: Dict): Dict
+  predict(tenant_id: str, alerts: List[AlertDto]): List[IncidentCandidate]
+}
+
+' Database Operations
+class AIDBOperations {
+  get_or_create_external_ai_settings(tenant_id: str): List[ExternalAIConfigAndMetadata]
+  update_external_ai_settings(tenant_id: str, settings: ExternalAIConfigAndMetadataDto): ExternalAIConfigAndMetadata
+}
+
+' API Routes
+class AIRoutes {
+  get_stats(authenticated_entity: AuthenticatedEntity): Dict
+  update_settings(algorithm_id: str, body: ExternalAIConfigAndMetadataDto, authenticated_entity: AuthenticatedEntity): ExternalAIConfigAndMetadata
+}
+
+class IncidentAIRoutes {
+  create_with_ai(alerts_fingerprints: List[str], authenticated_entity: AuthenticatedEntity): IncidentsClusteringSuggestion
+  commit_with_ai(suggestion_id: UUID, incidents_with_feedback: List[Dict], authenticated_entity: AuthenticatedEntity): List[IncidentDto]
+}
+
+' Relationships
+TransformersCorrelation --|> ExternalAI: "is a"
+
+ExternalAI "1" -- "0..*" ExternalAIConfigAndMetadata: "configured by"
+ExternalAIDto "1" -- "1" ExternalAI: "represents"
+ExternalAIConfigAndMetadataDto "1" -- "1" ExternalAIConfigAndMetadata: "represents"
+ExternalAIConfigAndMetadataDto "1" -- "1" ExternalAIDto: "includes"
+
+AISuggestion "1" -- "0..*" AIFeedback: "has"
+AISuggestion "1" -- "1" AISuggestionType: "is of type"
+
+AISuggestionBl "1" -- "*" AISuggestion: "manages"
+AISuggestionBl "1" -- "*" AIFeedback: "manages"
+AISuggestionBl "1" -- "1" TransformersCorrelation: "uses"
+
+IncidentClustering "1" -- "*" IncidentCandidate: "contains"
+IncidentsClusteringSuggestion "1" -- "*" IncidentDto: "suggests"
+
+AIRoutes "1" -- "1" AIDBOperations: "uses"
+IncidentAIRoutes "1" -- "1" AISuggestionBl: "uses"
+
+@enduml 

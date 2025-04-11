@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Keep Documentation Repository</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 { color: #333; }
+        h2 { color: #555; margin-top: 30px; }
+        .section { margin-bottom: 40px; }
+        .btn { 
+            display: inline-block; 
+            margin: 10px;
+            padding: 15px 25px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .card-actions {
+            margin-top: 20px;
+        }
+        .highlight-btn {
+            background-color: #ff9800;
+        }
+        .highlight-btn:hover {
+            background-color: #e68a00;
+        }
+    </style>
+</head>
+<body>
+    <h1>Keep Documentation Repository</h1>
+    
+    <p>This repository contains documentation and diagrams for the Keep AIOps Platform, including both the current platform architecture and the planned Agentic AI integration.</p>
+    
+    <div class="section">
+        <h2>Repository Structure</h2>
+        
+        <div class="card">
+            <h3>Keep AIOps Platform</h3>
+            <p>Documentation about the current Keep AIOps Platform architecture, including:</p>
+            <ul>
+                <li>C4 model architecture diagrams (Context, Container, and Component levels)</li>
+                <li>Class diagrams for key subsystems</li>
+                <li>Sequence diagrams showing dynamic behavior</li>
+                <li>Written documentation about the platform architecture</li>
+                <li><strong>Core Modules Checklist</strong> for adaptation to high-volume IT Ops</li>
+            </ul>
+            <div class="card-actions">
+                <a href="keep_aiops/README.md" class="btn">View Documentation</a>
+                <a href="keep_aiops/images/index.html" class="btn">View Diagrams</a>
+                <a href="keep_aiops/CORE_MODULES_CHECKLIST.md" class="btn highlight-btn">View Core Modules Checklist</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Agentic AI Integration</h3>
+            <p>Documentation about the planned integration of Agentic AI capabilities with Keep, including:</p>
+            <ul>
+                <li>C4 model integration architecture diagrams</li>
+                <li>Architecture options analysis</li>
+                <li>Implementation timelines</li>
+                <li>Executive summaries</li>
+            </ul>
+            <div class="card-actions">
+                <a href="keep_agentic/README.md" class="btn">View Documentation</a>
+                <a href="keep_agentic/images/index.html" class="btn">View Diagrams</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>View All Diagrams</h2>
+        <p>Access the complete set of diagrams from the diagram index:</p>
+        <a href="images/index.html" class="btn">View All Diagrams</a>
+    </div>
+    
+    <div class="section">
+        <h2>For Junior Team Members</h2>
+        <p>If you're new to the team or need a more concrete understanding of the codebase:</p>
+        <ol>
+            <li>Start with the <a href="keep_aiops/images/index.html#class-diagrams">Class Diagrams</a> which show how the system's main classes are structured</li>
+            <li>Review the <a href="keep_aiops/images/index.html#sequence-diagrams">Sequence Diagrams</a> to understand how the components interact</li>
+            <li>Then explore the higher-level <a href="keep_aiops/images/index.html#c4-architecture-diagrams">C4 Diagrams</a> for the big picture</li>
+        </ol>
+    </div>
+</body>
+</html> 

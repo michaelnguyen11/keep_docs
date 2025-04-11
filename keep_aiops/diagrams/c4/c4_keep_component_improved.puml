@@ -1,0 +1,159 @@
+@startuml C4_Keep_Component_Improved
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for Keep AIOps Platform Core API - Alert Ingestion & Processing Focus
+
+Container_Boundary(api, "Keep API") {
+    ' API Routes
+    Component(alertRoutes, "Alert Routes", "FastAPI Routers", "API endpoints for alert management")
+    Component(incidentRoutes, "Incident Routes", "FastAPI Routers", "API endpoints for incident management")
+    Component(workflowRoutes, "Workflow Routes", "FastAPI Routers", "API endpoints for workflow management")
+    Component(providerRoutes, "Provider Routes", "FastAPI Routers", "API endpoints for provider configuration")
+    Component(aiRoutes, "AI Routes", "FastAPI Routers", "API endpoints for AI capabilities")
+    Component(userRoutes, "User Routes", "FastAPI Routers", "API endpoints for user management")
+    Component(deduplicationRoutes, "Deduplication Routes", "FastAPI Routers", "API endpoints for alert deduplication configuration")
+    
+    ' Alert Processing Core Components
+    Component(alertsBL, "Alerts Business Logic", "Python", "Handles alert processing, enrichment, and correlation")
+    Component(alertProcessor, "Alert Processor", "Python", "Core component for handling alert intake and processing")
+    Component(alertDeduplicator, "Alert Deduplicator", "Python", "Handles alert deduplication based on configurable rules")
+    Component(alertFingerprinter, "Alert Fingerprinter", "Python", "Generates unique fingerprints for alerts to identify duplicates")
+    Component(processEventTask, "Process Event Task", "Python/ARQ", "Asynchronous task handler for alert processing")
+    
+    ' Incident Components
+    Component(incidentsBL, "Incidents Business Logic", "Python", "Manages incident lifecycle and operations")
+    Component(enrichmentsBL, "Enrichments Business Logic", "Python", "Handles alert and incident enrichment")
+    Component(aiSuggestionBL, "AI Suggestion Logic", "Python", "Manages AI-generated suggestions and insights")
+    
+    ' Search Components
+    Component(searchEngine, "Search Engine Client", "Python", "Provides search capabilities via Elasticsearch")
+    Component(incidentReporter, "Incident Reports", "Python", "Generates incident reports and summaries")
+    
+    ' Data Access
+    Component(dataModels, "Data Models", "SQLModel/Pydantic", "Defines data models and schemas")
+    Component(dbAccess, "Database Access Layer", "SQLModel/SQLAlchemy", "Handles database operations and queries")
+    
+    ' Utilities
+    Component(authMiddleware, "Auth Middleware", "Python", "Handles authentication and authorization")
+    Component(observability, "Observability Utils", "Python", "Provides logging and monitoring")
+    Component(paginationUtils, "Pagination Utils", "Python", "Handles result pagination")
+}
+
+' External containers
+Container(webApp, "Keep UI", "React, Next.js", "Frontend application")
+Container(workflowManager, "Workflow Manager", "Python", "Workflow execution engine")
+Container(rulesEngine, "Rules Engine", "Python, CEL", "Rules evaluation engine for alert correlation and incident creation")
+Container(providerSystem, "Provider System", "Python", "Provider integrations for alert sources")
+Container(wsServer, "WebSocket Server", "Soketi", "Real-time updates for UI")
+ContainerDb(database, "Database", "PostgreSQL/MySQL/SQLite", "Primary data storage for alerts and incidents")
+Container(elasticSearch, "Elasticsearch", "Elastic", "Historical alert storage for high volume (600GB/day capacity)")
+Container(redis, "Redis Queue", "Redis + ARQ", "Buffer system for high-volume alert processing")
+Container(workers, "Alert Processor Workers", "Python + ARQ", "Distributed worker pool for processing queue items")
+Container(aiManager, "AI Manager", "Python", "AI operations management")
+Container(secretsManager, "Secrets Manager", "Python", "Credentials management")
+
+' External systems
+System_Ext(observabilityTools, "Monitoring Tools", "Alert sources (Dynatrace, SolarWinds, etc.)")
+System_Ext(ticketingSystems, "Ticketing Systems", "Incident tracking")
+
+' Frontend to API Routes
+Rel(webApp, alertRoutes, "Request alert data", "HTTPS/JSON")
+Rel(webApp, deduplicationRoutes, "Configure deduplication", "HTTPS/JSON")
+Rel(webApp, incidentRoutes, "Requests incident data", "HTTPS/JSON")
+Rel(webApp, workflowRoutes, "Requests workflow data", "HTTPS/JSON")
+Rel(webApp, providerRoutes, "Requests provider data", "HTTPS/JSON")
+Rel(webApp, aiRoutes, "Requests AI capabilities", "HTTPS/JSON")
+Rel(webApp, userRoutes, "Requests user data", "HTTPS/JSON")
+
+' External tools to API
+Rel(observabilityTools, alertRoutes, "Send alert data", "HTTPS/JSON Webhook")
+
+' Alert Ingestion Flow
+Rel(alertRoutes, alertProcessor, "Validate & queue alert", "FastAPI")
+Rel(alertProcessor, alertFingerprinter, "Generate fingerprint", "Internal")
+Rel(alertProcessor, redis, "Queue alert for async processing", "Redis")
+Rel_Back(alertRoutes, observabilityTools, "202 Accepted immediate acknowledgment", "HTTPS/JSON")
+
+' Alert Processing Flow
+Rel(redis, workers, "Pull alert from queue", "Redis")
+Rel(workers, processEventTask, "Execute alert processing", "ARQ")
+Rel(processEventTask, alertDeduplicator, "Check for duplicates", "Internal")
+Rel(alertDeduplicator, dbAccess, "Query for similar alerts", "SQL")
+Rel(processEventTask, enrichmentsBL, "Enrich alert data", "Internal")
+Rel(processEventTask, rulesEngine, "Apply correlation rules", "Internal")
+Rel(processEventTask, dbAccess, "Save processed alert", "SQL")
+Rel(processEventTask, elasticSearch, "Archive alert for historical storage", "Elasticsearch API")
+Rel(processEventTask, wsServer, "Publish alert update event", "WebSocket")
+Rel(wsServer, webApp, "Push real-time update", "WebSocket")
+
+' Alert Business Logic and DB
+Rel(alertsBL, alertProcessor, "Uses")
+Rel(alertsBL, dbAccess, "Query alerts")
+Rel(alertsBL, alertDeduplicator, "Apply deduplication rules")
+Rel(alertsBL, observability, "Log events")
+
+' API Routes to Business Logic
+Rel(alertRoutes, alertsBL, "Uses")
+Rel(alertRoutes, authMiddleware, "Uses for authentication")
+Rel(alertRoutes, paginationUtils, "Uses for pagination")
+
+Rel(incidentRoutes, incidentsBL, "Uses")
+Rel(incidentRoutes, authMiddleware, "Uses for authentication")
+Rel(incidentRoutes, paginationUtils, "Uses for pagination")
+
+Rel(workflowRoutes, workflowManager, "Delegates to")
+Rel(workflowRoutes, authMiddleware, "Uses for authentication")
+
+Rel(providerRoutes, providerSystem, "Delegates to")
+Rel(providerRoutes, authMiddleware, "Uses for authentication")
+
+Rel(aiRoutes, aiSuggestionBL, "Uses")
+Rel(aiRoutes, authMiddleware, "Uses for authentication")
+
+Rel(userRoutes, authMiddleware, "Uses for authentication")
+
+' Deduplication Routes
+Rel(deduplicationRoutes, alertDeduplicator, "Configure deduplication rules")
+
+' Rules Engine
+Rel(rulesEngine, incidentsBL, "Create incidents from correlated alerts")
+
+' Incident Business Logic
+Rel(incidentsBL, incidentReporter, "Uses for reporting")
+Rel(incidentsBL, dbAccess, "Manage incidents")
+Rel(incidentsBL, enrichmentsBL, "Uses for enrichment")
+Rel(incidentsBL, wsServer, "Publishes events to")
+Rel(incidentsBL, workflowManager, "Trigger workflows")
+Rel(incidentsBL, observability, "Uses for logging")
+
+' Enrichments
+Rel(enrichmentsBL, aiManager, "Uses for AI enrichment")
+Rel(enrichmentsBL, dbAccess, "Uses for data access")
+Rel(enrichmentsBL, providerSystem, "Retrieves context via")
+Rel(enrichmentsBL, observability, "Uses for logging")
+
+' AI Suggestions
+Rel(aiSuggestionBL, aiManager, "Uses for AI capabilities")
+Rel(aiSuggestionBL, dbAccess, "Uses for data access")
+Rel(aiSuggestionBL, observability, "Uses for logging")
+
+' Data components
+Rel(dbAccess, dataModels, "Uses")
+Rel(dbAccess, database, "Reads from and writes to")
+Rel(searchEngine, elasticSearch, "Queries and indexes")
+
+' External systems to API
+Rel_Left(observabilityTools, alertRoutes, "Sends alerts to", "Webhooks/API")
+Rel_U(ticketingSystems, incidentRoutes, "Webhook callbacks to", "API")
+
+' Search Engine
+Rel(alertRoutes, searchEngine, "Search historical alerts")
+
+' Core to External Components
+Rel_Down(workflowManager, providerSystem, "Executes actions via")
+Rel_Down(aiManager, providerSystem, "Uses AI services via")
+Rel_Down(providerSystem, secretsManager, "Retrieves credentials from")
+
+@enduml 

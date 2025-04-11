@@ -1,0 +1,121 @@
+@startuml C4_Keep_Component_Improved
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for Keep AIOps Platform Core API (Current State)
+
+Container_Boundary(api, "Keep API") {
+    ' API Routes
+    Component(alertRoutes, "Alert Routes", "FastAPI Routers", "API endpoints for alert management")
+    Component(incidentRoutes, "Incident Routes", "FastAPI Routers", "API endpoints for incident management")
+    Component(workflowRoutes, "Workflow Routes", "FastAPI Routers", "API endpoints for workflow management")
+    Component(providerRoutes, "Provider Routes", "FastAPI Routers", "API endpoints for provider configuration")
+    Component(aiRoutes, "AI Routes", "FastAPI Routers", "API endpoints for AI capabilities")
+    Component(userRoutes, "User Routes", "FastAPI Routers", "API endpoints for user management")
+    
+    ' Business Logic
+    Component(alertsBL, "Alerts Business Logic", "Python", "Handles alert processing, enrichment, and correlation")
+    Component(incidentsBL, "Incidents Business Logic", "Python", "Manages incident lifecycle and operations")
+    Component(enrichmentsBL, "Enrichments Business Logic", "Python", "Handles alert and incident enrichment")
+    Component(aiSuggestionBL, "AI Suggestion Logic", "Python", "Manages AI-generated suggestions and insights")
+    
+    ' Core Components
+    Component(alertDeduplicator, "Alert Deduplicator", "Python", "Handles alert deduplication logic")
+    Component(searchEngine, "Search Engine Client", "Python", "Provides search capabilities via Elasticsearch")
+    Component(incidentReporter, "Incident Reports", "Python", "Generates incident reports and summaries")
+    
+    ' Data Access
+    Component(dataModels, "Data Models", "SQLModel/Pydantic", "Defines data models and schemas")
+    Component(dbAccess, "Database Access Layer", "SQLModel/SQLAlchemy", "Handles database operations and queries")
+    
+    ' Utilities
+    Component(authMiddleware, "Auth Middleware", "Python", "Handles authentication and authorization")
+    Component(observability, "Observability Utils", "Python", "Provides logging and monitoring")
+    Component(paginationUtils, "Pagination Utils", "Python", "Handles result pagination")
+}
+
+' External containers
+Container(webApp, "Keep UI", "React, Next.js", "Frontend application")
+Container(workflowManager, "Workflow Manager", "Python", "Workflow execution engine")
+Container(rulesEngine, "Rules Engine", "Python, CEL", "Rules evaluation engine")
+Container(providerSystem, "Provider System", "Python", "Provider integrations")
+Container(wsServer, "WebSocket Server", "Soketi", "Real-time updates")
+ContainerDb(database, "Database", "PostgreSQL/MySQL/SQLite", "Data storage")
+Container(backgroundTasks, "Background Tasks", "ARQ", "Async processing")
+Container(aiManager, "AI Manager", "Python", "AI operations management")
+Container(secretsManager, "Secrets Manager", "Python", "Credentials management")
+
+' External systems
+System_Ext(observabilityTools, "Observability Tools", "Alert sources")
+System_Ext(ticketingSystems, "Ticketing Systems", "Incident tracking")
+
+' Frontend to API Routes
+Rel(webApp, alertRoutes, "Requests alert data", "HTTPS/JSON")
+Rel(webApp, incidentRoutes, "Requests incident data", "HTTPS/JSON")
+Rel(webApp, workflowRoutes, "Requests workflow data", "HTTPS/JSON")
+Rel(webApp, providerRoutes, "Requests provider data", "HTTPS/JSON")
+Rel(webApp, aiRoutes, "Requests AI capabilities", "HTTPS/JSON")
+Rel(webApp, userRoutes, "Requests user data", "HTTPS/JSON")
+
+' API Routes to Business Logic
+Rel(alertRoutes, alertsBL, "Uses")
+Rel(alertRoutes, authMiddleware, "Uses for authentication")
+Rel(alertRoutes, paginationUtils, "Uses for pagination")
+
+Rel(incidentRoutes, incidentsBL, "Uses")
+Rel(incidentRoutes, authMiddleware, "Uses for authentication")
+Rel(incidentRoutes, paginationUtils, "Uses for pagination")
+
+Rel(workflowRoutes, workflowManager, "Delegates to")
+Rel(workflowRoutes, authMiddleware, "Uses for authentication")
+
+Rel(providerRoutes, providerSystem, "Delegates to")
+Rel(providerRoutes, authMiddleware, "Uses for authentication")
+
+Rel(aiRoutes, aiSuggestionBL, "Uses")
+Rel(aiRoutes, authMiddleware, "Uses for authentication")
+
+Rel(userRoutes, authMiddleware, "Uses for authentication")
+
+' Business Logic to Core Components
+Rel(alertsBL, alertDeduplicator, "Uses for deduplication")
+Rel(alertsBL, searchEngine, "Uses for searching")
+Rel(alertsBL, dbAccess, "Uses for data access")
+Rel(alertsBL, rulesEngine, "Uses for rule evaluation")
+Rel(alertsBL, enrichmentsBL, "Uses for enrichment")
+Rel(alertsBL, wsServer, "Publishes events to")
+Rel(alertsBL, backgroundTasks, "Schedules tasks on")
+Rel(alertsBL, observability, "Uses for logging")
+
+Rel(incidentsBL, incidentReporter, "Uses for reporting")
+Rel(incidentsBL, dbAccess, "Uses for data access")
+Rel(incidentsBL, enrichmentsBL, "Uses for enrichment")
+Rel(incidentsBL, wsServer, "Publishes events to")
+Rel(incidentsBL, workflowManager, "Triggers workflows via")
+Rel(incidentsBL, observability, "Uses for logging")
+
+Rel(enrichmentsBL, aiManager, "Uses for AI enrichment")
+Rel(enrichmentsBL, dbAccess, "Uses for data access")
+Rel(enrichmentsBL, providerSystem, "Retrieves context via")
+Rel(enrichmentsBL, observability, "Uses for logging")
+
+Rel(aiSuggestionBL, aiManager, "Uses for AI capabilities")
+Rel(aiSuggestionBL, dbAccess, "Uses for data access")
+Rel(aiSuggestionBL, observability, "Uses for logging")
+
+' Data components
+Rel(dbAccess, dataModels, "Uses")
+Rel(dbAccess, database, "Reads from and writes to")
+
+' External systems to API
+Rel_Left(observabilityTools, alertRoutes, "Sends alerts to", "Webhooks/API")
+Rel_U(ticketingSystems, incidentRoutes, "Webhook callbacks to", "API")
+
+' Core to External Components
+Rel_Down(workflowManager, backgroundTasks, "Schedules jobs on")
+Rel_Down(workflowManager, providerSystem, "Executes actions via")
+Rel_Down(aiManager, providerSystem, "Uses AI services via")
+Rel_Down(providerSystem, secretsManager, "Retrieves credentials from")
+
+@enduml 

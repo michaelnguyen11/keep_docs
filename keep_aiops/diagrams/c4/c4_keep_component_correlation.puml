@@ -1,0 +1,78 @@
+@startuml C4_Keep_Component_Correlation
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for Keep AIOps Platform - Alert Correlation Engine Focus
+
+Container_Boundary(api, "Keep API") {
+    ' API Routes
+    Component(alertRoutes, "Alert Routes", "FastAPI Routers", "API endpoints for alert management")
+    Component(incidentRoutes, "Incident Routes", "FastAPI Routers", "API endpoints for incident management")
+    Component(ruleRoutes, "Rule Routes", "FastAPI Routers", "API endpoints for correlation rule management")
+    
+    ' Alert Correlation Core Components
+    Component(rulesEngine, "Rules Engine", "Python", "Core correlation engine that evaluates alerts against rules")
+    Component(celEngine, "CEL Engine", "celpy", "Common Expression Language for rule evaluation")
+    Component(processEventTask, "Process Event Task", "Python/ARQ", "Processes alerts and triggers correlation")
+    Component(alertDeduplicator, "Alert Deduplicator", "Python", "Handles alert deduplication")
+    
+    ' Incident Components
+    Component(incidentsBL, "Incidents Business Logic", "Python", "Manages incident lifecycle and operations")
+    Component(fingerprinter, "Rule Fingerprinter", "Python", "Calculates rule fingerprints for grouping")
+    Component(ruleMatcher, "Rule Matcher", "Python", "Matches alerts against rule conditions")
+    
+    ' Data Access
+    Component(dbRules, "Rules Repository", "SQLModel", "Stores and retrieves correlation rules")
+    Component(dbAccess, "Database Access Layer", "SQLModel/SQLAlchemy", "Handles database operations")
+    
+    ' Utilities
+    Component(authMiddleware, "Auth Middleware", "Python", "Handles authentication and authorization")
+    Component(celUtils, "CEL Utils", "Python", "Preprocessing and utility functions for CEL")
+    Component(workflowTrigger, "Workflow Trigger", "Python", "Triggers workflows on incident events")
+}
+
+' External containers
+Container(webApp, "Keep UI", "React, Next.js", "Frontend application")
+Container(redis, "Redis Queue", "Redis + ARQ", "Buffer for high-volume alert processing")
+Container(database, "Database", "PostgreSQL", "Stores alerts, incidents, and rules")
+Container(wsServer, "WebSocket Server", "Soketi", "Real-time updates")
+
+' External systems
+System_Ext(observabilityTools, "Monitoring Tools", "Alert sources")
+
+' Frontend to API Routes
+Rel(webApp, alertRoutes, "Requests alert data", "HTTPS/JSON")
+Rel(webApp, incidentRoutes, "Requests incident data", "HTTPS/JSON")
+Rel(webApp, ruleRoutes, "Manages correlation rules", "HTTPS/JSON")
+
+' External tools to API
+Rel(observabilityTools, alertRoutes, "Sends alerts", "HTTPS/JSON")
+
+' Alert Correlation Flow
+Rel(processEventTask, rulesEngine, "Trigger correlation", "Function call")
+Rel(rulesEngine, celEngine, "Evaluate rule expressions", "CEL evaluation")
+Rel(rulesEngine, dbRules, "Load correlation rules", "SQL query")
+Rel(rulesEngine, celUtils, "Preprocess expressions", "Function call")
+
+' Rule Evaluation Components
+Rel(rulesEngine, ruleMatcher, "Evaluate if rule applies", "Function call")
+Rel(rulesEngine, fingerprinter, "Calculate rule fingerprints", "Function call")
+Rel(ruleMatcher, celEngine, "Evaluate rule conditions", "CEL evaluation")
+
+' Incident Management
+Rel(rulesEngine, incidentsBL, "Create and update incidents", "Function call")
+Rel(incidentsBL, dbAccess, "Store incident data", "SQL")
+Rel(incidentsBL, wsServer, "Publish incident updates", "WebSocket")
+Rel(wsServer, webApp, "Push real-time updates", "WebSocket")
+Rel(rulesEngine, workflowTrigger, "Send incident workflow events", "Function call")
+
+' Data Access
+Rel(dbRules, database, "Store rules", "SQL")
+Rel(dbAccess, database, "Store incidents and alerts", "SQL")
+
+' Rule components interactions
+Rel(celEngine, celUtils, "Use for preprocessing", "Function call")
+Rel(processEventTask, alertDeduplicator, "Deduplicate before correlation", "Function call")
+
+@enduml 

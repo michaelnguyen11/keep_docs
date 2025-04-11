@@ -1,0 +1,113 @@
+@startuml ml_anomaly_detection_sequence
+!theme plain
+skinparam SequenceMessageAlignment center
+
+' Note: This diagram uses terms and methods that directly map to elements in:
+' - keep/api/routes/incidents.py (/ai/suggest endpoint)
+' - keep/api/bl/ai_suggestion_bl.py (AISuggestionBl class)
+' - keep/api/models/db/ai_suggestion.py (AISuggestion and AIFeedback classes)
+' - keep/api/models/db/ai_external.py (ExternalAI class)
+
+title ML-Based Anomaly Detection Sequence
+
+actor "User" as User
+participant "API Routes\n/ai/suggest" as API
+participant "AISuggestionBl\nkeep/api/bl/ai_suggestion_bl.py" as AISuggestionBl
+participant "OpenAI\n_client" as OpenAI
+participant "DB\nSession" as DB
+participant "TransformersCorrelation\nexternal_ai_transformers" as TransformersAI
+participant "IncidentBl\nkeep/api/bl/incidents_bl.py" as IncidentBl
+participant "WebSocket\npusher_client" as WebSocket
+
+== Model Training Phase ==
+
+TransformersAI -> TransformersAI: Train model on historical data
+activate TransformersAI
+TransformersAI -> TransformersAI: Extract features from historical alerts
+TransformersAI -> TransformersAI: Identify patterns in historical incidents
+TransformersAI -> TransformersAI: Train & validate model (30% validation split)
+TransformersAI -> TransformersAI: Save trained model
+deactivate TransformersAI
+
+== Anomaly Detection & Suggestion Phase ==
+
+User -> API: Request AI incident suggestions\n(alerts_fingerprints)
+activate API
+
+API -> AISuggestionBl: suggest_incidents(alerts_dto, topology_data, user_id)
+activate AISuggestionBl
+
+AISuggestionBl -> DB: get_last_alerts(tenant_id, fingerprints)
+DB --> AISuggestionBl: Return alert data
+
+AISuggestionBl -> AISuggestionBl: hash_suggestion_input(suggestion_input)
+AISuggestionBl -> DB: get_suggestion_by_input(suggestion_input)
+DB --> AISuggestionBl: Return existing suggestion (if any)
+
+alt Existing suggestion found
+    AISuggestionBl -> AISuggestionBl: _process_incidents(incidents, alerts_dto)
+else No existing suggestion
+    AISuggestionBl -> AISuggestionBl: _prepare_prompts(alerts_dto, topology_data)
+    AISuggestionBl -> OpenAI: _get_ai_completion(system_prompt, user_prompt)
+    activate OpenAI
+    OpenAI --> AISuggestionBl: Return completion (IncidentClustering)
+    deactivate OpenAI
+    
+    AISuggestionBl -> DB: add_suggestion(user_id, suggestion_input, type, content, model)
+    DB --> AISuggestionBl: Return saved suggestion
+    
+    AISuggestionBl -> AISuggestionBl: _process_incidents(incidents, alerts_dto)
+end
+
+AISuggestionBl --> API: Return IncidentsClusteringSuggestion
+deactivate AISuggestionBl
+
+API --> User: Return suggested incident clusters
+deactivate API
+
+== Commit Suggestions with Feedback (/ai/{suggestion_id}/commit) ==
+
+User -> API: Commit suggestions with feedback
+activate API
+
+API -> AISuggestionBl: commit_incidents(suggestion_id, incidents_with_feedback, user_id)
+activate AISuggestionBl
+
+AISuggestionBl -> DB: Get suggestion by ID
+DB --> AISuggestionBl: Return suggestion data
+
+AISuggestionBl -> DB: add_feedback(suggestion_id, user_id, feedback_content, rating, comment)
+DB --> AISuggestionBl: Confirm feedback saved
+
+loop For each approved incident
+    AISuggestionBl -> IncidentBl: create_incident(incident_dto)
+    activate IncidentBl
+    IncidentBl -> DB: Save incident
+    DB --> IncidentBl: Return saved incident
+    
+    IncidentBl -> WebSocket: Publish incident creation
+    WebSocket --> User: Notify about new incident
+    
+    IncidentBl --> AISuggestionBl: Return created incident
+    deactivate IncidentBl
+end
+
+AISuggestionBl --> API: Return list of created incidents
+deactivate AISuggestionBl
+
+API --> User: Return created incidents
+deactivate API
+
+== Continuous Model Improvement ==
+
+TransformersAI -> DB: Fetch new incident data and feedback
+DB --> TransformersAI: Return new training data
+
+TransformersAI -> TransformersAI: Retrain model with new data
+activate TransformersAI
+TransformersAI -> TransformersAI: Incorporate user feedback
+TransformersAI -> TransformersAI: Evaluate model performance
+TransformersAI -> TransformersAI: Update model if performance improves
+deactivate TransformersAI
+
+@enduml 

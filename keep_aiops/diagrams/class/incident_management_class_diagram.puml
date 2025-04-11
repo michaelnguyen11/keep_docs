@@ -1,0 +1,189 @@
+@startuml incident_management_class_diagram
+!theme plain
+skinparam linetype ortho
+
+' Incident Model Classes
+class Incident {
+  id: UUID
+  tenant_id: str
+  running_number: int
+  user_generated_name: str
+  ai_generated_name: str
+  user_summary: str
+  generated_summary: str
+  assignee: str
+  severity: int
+  forced_severity: bool
+  status: str
+  creation_time: datetime
+  start_time: datetime
+  end_time: datetime
+  last_seen_time: datetime
+  is_predicted: bool
+  is_candidate: bool
+  is_visible: bool
+  alerts_count: int
+  affected_services: list
+  sources: list
+  rule_id: UUID
+  rule_fingerprint: str
+  fingerprint: str
+}
+
+enum IncidentStatus {
+  FIRING
+  RESOLVED
+  ACKNOWLEDGED
+  MERGED
+  DELETED
+  
+  get_active()
+  get_closed()
+}
+
+enum IncidentSeverity {
+  CRITICAL
+  HIGH
+  WARNING
+  INFO
+  LOW
+  
+  from_number(n)
+}
+
+enum IncidentType {
+  MANUAL
+  AI
+  RULE
+  TOPOLOGY
+}
+
+' Incident DTO Classes
+class IncidentDto {
+  id: UUID
+  user_generated_name: str
+  ai_generated_name: str
+  user_summary: str
+  generated_summary: str
+  assignee: str
+  status: IncidentStatus
+  severity: IncidentSeverity
+  alerts_count: int
+  alert_sources: list[str]
+  services: list[str]
+  start_time: datetime
+  end_time: datetime
+  last_seen_time: datetime
+  creation_time: datetime
+  is_predicted: bool
+  is_candidate: bool
+  rule_fingerprint: str
+  fingerprint: str
+  same_incident_in_the_past_id: UUID
+  merged_into_incident_id: UUID
+  merged_by: str
+  merged_at: datetime
+  enrichments: dict
+  incident_type: str
+  incident_application: str
+  resolve_on: str
+  rule_id: UUID
+  rule_name: str
+  rule_is_deleted: bool
+  
+  from_db_incident(incident): IncidentDto
+}
+
+class IncidentStatusChangeDto {
+  status: IncidentStatus
+  comment: str
+}
+
+class IncidentListFilterParamsDto {
+  statuses: List[IncidentStatus]
+  severities: List[IncidentSeverity]
+  assignees: List[str]
+  services: List[str]
+  sources: List[str]
+}
+
+class IncidentDtoIn {
+  user_generated_name: str
+  user_summary: str
+  assignee: str
+  severity: IncidentSeverity
+  resolve_on: str
+}
+
+' Business Logic Classes
+class IncidentBl {
+  tenant_id: str
+  session: Session
+  logger: Logger
+  pusher_client: Pusher
+  redis: Redis
+  
+  get_incident(incident_id: UUID): IncidentDto
+  get_incidents(filter_params: dict): List[IncidentDto]
+  create_incident(incident_dto: IncidentDtoIn): IncidentDto
+  update_incident(incident_id: UUID, incident_dto: IncidentDtoIn): IncidentDto
+  change_status(incident_id: UUID, new_status: IncidentStatus, change_by): IncidentDto
+  resolve_incident_if_require(incident: Incident): Incident
+  add_alert_to_incident(incident_id: UUID, alert_id: str): IncidentDto
+  remove_alert_from_incident(incident_id: UUID, alert_id: str): IncidentDto
+  merge_incidents(source_id: UUID, target_id: UUID): IncidentDto
+  send_workflow_event(incident_dto: IncidentDto, action: str): None
+}
+
+class IncidentReportsBl {
+  tenant_id: str
+  session: Session
+  
+  get_incident_report(start_time: datetime, end_time: datetime): IncidentReport
+  generate_incident_report_summary(report: IncidentReport): str
+  __calculate_top_services_affected(incidents: list[IncidentDto]): dict
+  __calculate_severity_metrics(incidents: list[IncidentDto]): dict
+  __calculate_mttd(incidents: list[IncidentDto]): int
+  __calculate_mttr(incidents: list[IncidentDto]): int
+}
+
+' Database Operations Classes
+class IncidentDatabaseOperations {
+  get_incident_by_id(tenant_id: str, incident_id: UUID): Incident
+  get_incidents_by_filter(tenant_id: str, filter_params: dict): List[Incident]
+  create_incident_in_db(tenant_id: str, incident_dto: IncidentDtoIn): Incident
+  update_incident_in_db(tenant_id: str, incident_id: UUID, data: dict): Incident
+  change_incident_status_by_id(tenant_id: str, incident_id: UUID, status: IncidentStatus): bool
+  assign_alert_to_incident(fingerprint: str, incident: Incident): Incident
+  remove_alert_from_incident(alert_id: str, incident_id: UUID): bool
+  get_incident_unique_fingerprint_count(tenant_id: str, incident_id: UUID): int
+  enrich_incidents_with_alerts(tenant_id: str, incidents: List[Incident]): None
+}
+
+' Workflow classes
+class WorkflowManager {
+  insert_incident(tenant_id: str, incident: IncidentDto, trigger: str): None
+}
+
+' Relationships
+IncidentStatus "1" <-- "1" Incident: "has status"
+IncidentSeverity "1" <-- "1" Incident: "has severity"
+IncidentType "1" <-- "0..1" Incident: "has type"
+
+IncidentDto "1" --> "1" IncidentStatus: "has status"
+IncidentDto "1" --> "1" IncidentSeverity: "has severity"
+IncidentDto "1" --> "0..1" IncidentType: "has type"
+
+IncidentBl "1" --> "*" Incident: "manages"
+IncidentBl "1" --> "1" WorkflowManager: "uses"
+IncidentBl "1" --> "1" IncidentDatabaseOperations: "uses"
+
+IncidentReportsBl "1" --> "*" Incident: "analyzes"
+IncidentReportsBl "1" --> "1" IncidentDatabaseOperations: "uses"
+
+IncidentStatusChangeDto "1" --> "1" IncidentStatus: "updates to"
+
+IncidentListFilterParamsDto "1" --> "*" IncidentStatus: "filters by"
+IncidentListFilterParamsDto "1" --> "*" IncidentSeverity: "filters by"
+
+@enduml 

@@ -1,0 +1,181 @@
+@startuml Alert_Processing_Sequence
+
+title Keep AIOps Platform - Alert Processing Sequence
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "External System" as External
+participant "API\nEndpoint" as API
+participant "AlertsBL" as AlertsBL
+participant "AlertDeduplicator" as Deduplicator
+participant "RulesEngine" as Rules
+participant "EnrichmentsBL" as Enrichment
+participant "IncidentsBL" as IncidentsBL
+participant "Database" as DB
+participant "WebSocket\nServer" as WS
+participant "User Interface" as UI
+
+== Alert Ingestion ==
+
+External -> API: POST /api/alerts
+activate API
+
+API -> AlertsBL: create_alert(alert_dto)
+activate AlertsBL
+
+AlertsBL -> DB: Check existing alerts
+activate DB
+DB --> AlertsBL: Existing alerts
+deactivate DB
+
+AlertsBL -> Deduplicator: deduplicate_alert(alert_dto)
+activate Deduplicator
+note right of Deduplicator
+  Checks against deduplication rules
+  and existing alerts with similar
+  fingerprints
+end note
+
+alt New alert
+  Deduplicator --> AlertsBL: New alert (isFullDuplicate=false)
+else Duplicate alert
+  Deduplicator --> AlertsBL: Duplicate alert (isFullDuplicate=true)
+  AlertsBL -> DB: Update existing alert counter
+  activate DB
+  DB --> AlertsBL: Updated alert
+  deactivate DB
+end alt
+deactivate Deduplicator
+
+AlertsBL -> Rules: evaluate_rules(alert_dto)
+activate Rules
+note right of Rules
+  Evaluates alert against configured rules
+  for enrichment, correlation, and routing
+end note
+Rules --> AlertsBL: Rule results
+deactivate Rules
+
+AlertsBL -> Enrichment: enrich_alert(alert_dto)
+activate Enrichment
+note right of Enrichment
+  Adds additional context from 
+  internal and external sources
+end note
+
+Enrichment -> Enrichment: apply_standard_enrichments()
+Enrichment -> Enrichment: apply_ai_enrichments()
+Enrichment --> AlertsBL: Enriched alert
+deactivate Enrichment
+
+AlertsBL -> DB: Save alert
+activate DB
+DB --> AlertsBL: Saved alert
+deactivate DB
+
+AlertsBL -> WS: Publish alert update
+activate WS
+WS --> UI: Real-time update
+deactivate WS
+
+AlertsBL --> API: Alert response
+deactivate AlertsBL
+
+API --> External: HTTP Response
+deactivate API
+
+== Alert Correlation and Incident Creation ==
+
+AlertsBL -> Rules: check_incident_rules(alert_dto)
+activate Rules
+activate AlertsBL
+
+alt Matches incident rule
+  Rules --> AlertsBL: Create incident
+  AlertsBL -> IncidentsBL: create_incident(incident_dto)
+  activate IncidentsBL
+  
+  IncidentsBL -> DB: Save incident
+  activate DB
+  DB --> IncidentsBL: Saved incident
+  deactivate DB
+  
+  IncidentsBL -> AlertsBL: add_alerts_to_incident(incident_id, [alert_fingerprint])
+  AlertsBL -> DB: Update alert with incident ID
+  activate DB
+  DB --> AlertsBL: Updated alert
+  deactivate DB
+  
+  IncidentsBL -> WS: Publish incident creation
+  activate WS
+  WS --> UI: Real-time update
+  deactivate WS
+  
+  IncidentsBL --> AlertsBL: Created incident
+  deactivate IncidentsBL
+end alt
+
+deactivate Rules
+deactivate AlertsBL
+
+== Alert Status Update ==
+
+External -> API: PUT /api/alerts/{fingerprint}
+activate API
+API -> AlertsBL: update_alert(fingerprint, update_dto)
+activate AlertsBL
+
+AlertsBL -> DB: Get alert
+activate DB
+DB --> AlertsBL: Alert
+deactivate DB
+
+AlertsBL -> AlertsBL: Update alert status
+AlertsBL -> DB: Save updated alert
+activate DB
+DB --> AlertsBL: Updated alert
+deactivate DB
+
+alt Alert belongs to incident
+  AlertsBL -> IncidentsBL: check_incident_update(alert)
+  activate IncidentsBL
+  IncidentsBL -> DB: Get incident alerts
+  activate DB
+  DB --> IncidentsBL: Incident alerts
+  deactivate DB
+  
+  alt All alerts resolved
+    IncidentsBL -> IncidentsBL: resolve_incident(incident_id)
+    IncidentsBL -> DB: Update incident status
+    activate DB
+    DB --> IncidentsBL: Updated incident
+    deactivate DB
+    
+    IncidentsBL -> WS: Publish incident update
+    activate WS
+    WS --> UI: Real-time update
+    deactivate WS
+  end alt
+  
+  IncidentsBL --> AlertsBL: Incident update result
+  deactivate IncidentsBL
+end alt
+
+AlertsBL -> WS: Publish alert update
+activate WS
+WS --> UI: Real-time update
+deactivate WS
+
+AlertsBL --> API: Updated alert
+deactivate AlertsBL
+
+API --> External: HTTP Response
+deactivate API
+
+@enduml 

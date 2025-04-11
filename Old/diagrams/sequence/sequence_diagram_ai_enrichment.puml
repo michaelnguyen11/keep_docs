@@ -1,0 +1,56 @@
+@startuml AI_Enrichment
+title AI Enrichment Flow - Keep AIOps Platform
+
+actor "User" as User
+participant "Incident Service" as IncidentService
+participant "Providers Factory" as ProviderFactory
+participant "AI Provider\n(OpenAI/Anthropic)" as AIProvider
+participant "Enrichment Service" as EnrichmentService
+database "Database" as DB
+
+User -> IncidentService: enrich_incident(incident_id)
+activate IncidentService
+
+IncidentService -> DB: get_incident(incident_id)
+IncidentService <-- DB: incident_data
+
+IncidentService -> DB: get_related_alerts(incident_id)
+IncidentService <-- DB: alerts_list
+
+IncidentService -> ProviderFactory: get_provider("openai")
+activate ProviderFactory
+ProviderFactory -> AIProvider: create_instance()
+IncidentService <-- ProviderFactory: ai_provider
+deactivate ProviderFactory
+
+IncidentService -> AIProvider: query(prompt, model="gpt-4o")
+activate AIProvider
+note right
+  Prompt includes:
+  - Incident summary
+  - Alert details
+  - Request for enrichment
+end note
+
+AIProvider -> AIProvider: generate_response()
+IncidentService <-- AIProvider: ai_response
+deactivate AIProvider
+
+IncidentService -> EnrichmentService: process_and_store_enrichment(incident_id, ai_response)
+activate EnrichmentService
+
+EnrichmentService -> EnrichmentService: extract_structured_data(ai_response)
+EnrichmentService -> DB: store_incident_enrichment(incident_id, enrichment_data)
+EnrichmentService <-- DB: success
+
+EnrichmentService -> IncidentService: generate_incident_summary(incident_id, ai_response)
+IncidentService -> DB: update_incident_summary(incident_id, summary)
+IncidentService <-- DB: updated_incident
+
+IncidentService <-- EnrichmentService: enrichment_result
+deactivate EnrichmentService
+
+User <-- IncidentService: enriched_incident
+deactivate IncidentService
+
+@enduml 

@@ -1,0 +1,80 @@
+@startuml C4_Agentic_Component
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title "Keep AIOps Platform - Agentic Integration Component Diagram"
+
+Container(workflow_engine, "Workflow Engine", "Python", "Executes workflows based on triggers and conditions")
+Container(rule_engine, "Rule Engine", "Python", "Correlates alerts into incidents using defined rules")
+Container(provider_system, "Provider System", "Python", "Integration with external services")
+Container_Ext(llm_service, "LLM Service", "OpenAI/Anthropic API", "Provides foundation model capabilities")
+ContainerDb(database, "Database", "PostgreSQL", "Stores workflow data and agent state")
+
+Container_Boundary(agent_provider, "Agent Provider System") {
+    Component(provider_interface, "Provider Interface", "Python", "Implements BaseProvider interface for Keep")
+    Component(agent_factory, "Agent Factory", "Python", "Creates and configures agent instances")
+    Component(agent_registry, "Agent Registry", "Python", "Manages agent lifecycle and instances")
+    Component(agent_api, "Agent API", "FastAPI", "API endpoints for agent operations")
+    Component(agent_config, "Agent Configuration", "Python", "Manages agent settings")
+}
+
+Container_Boundary(agent_workflow, "Agent Workflow Engine") {
+    Component(graph_manager, "Graph Manager", "LangGraph", "Creates and manages state graphs")
+    Component(state_manager, "State Manager", "LangGraph", "Tracks and persists agent state")
+    Component(node_executor, "Node Executor", "LangGraph", "Executes nodes in the agent graph")
+    Component(langgraph_runtime, "LangGraph Runtime", "LangGraph", "Core runtime for agent execution")
+}
+
+Container_Boundary(tool_system, "Tool System") {
+    Component(tool_registry, "Tool Registry", "Python", "Manages available tools")
+    Component(tool_executor, "Tool Executor", "Python", "Executes tools with permissions")
+    Component(tool_adapter, "Tool Adapter", "Python", "Adapts Keep providers to agent tools")
+}
+
+Container_Boundary(memory_system, "Memory System") {
+    Component(memory_store, "Memory Store", "Python", "Persistent storage for agent memories")
+    Component(memory_retriever, "Memory Retriever", "Python", "Retrieves relevant memories")
+    Component(memory_indexer, "Memory Indexer", "Python", "Indexes memories for retrieval")
+}
+
+Container_Boundary(feedback_system, "Feedback System") {
+    Component(feedback_collector, "Feedback Collector", "Python", "Collects user feedback")
+    Component(feedback_processor, "Feedback Processor", "Python", "Processes and applies feedback")
+    Component(approval_manager, "Approval Manager", "Python", "Manages approval workflows")
+}
+
+Rel(workflow_engine, provider_interface, "Uses for workflow steps")
+Rel(rule_engine, provider_interface, "Uses for incident classification")
+
+Rel(provider_interface, agent_factory, "Creates agents")
+Rel(provider_interface, agent_registry, "Manages agents")
+Rel(agent_factory, agent_config, "Uses")
+Rel(agent_registry, agent_factory, "Uses")
+Rel(agent_api, agent_registry, "Uses")
+
+Rel_Down(agent_factory, graph_manager, "Creates")
+Rel_Down(agent_registry, state_manager, "Manages state")
+Rel(graph_manager, langgraph_runtime, "Configures")
+Rel(state_manager, langgraph_runtime, "Tracks state in")
+Rel(langgraph_runtime, node_executor, "Executes nodes")
+
+Rel_Right(node_executor, tool_executor, "Executes tools")
+Rel(tool_executor, tool_registry, "Retrieves tools from")
+Rel(tool_adapter, provider_system, "Adapts")
+Rel(tool_registry, tool_adapter, "Registers")
+
+Rel_Left(node_executor, memory_retriever, "Retrieves memories")
+Rel(memory_retriever, memory_store, "Queries")
+Rel(memory_store, memory_indexer, "Uses")
+Rel(memory_store, database, "Persists to")
+
+Rel_Right(agent_registry, feedback_collector, "Collects feedback for")
+Rel(feedback_collector, feedback_processor, "Sends to")
+Rel(feedback_processor, approval_manager, "Uses")
+Rel(approval_manager, agent_registry, "Approves actions")
+
+Rel(langgraph_runtime, llm_service, "Sends prompts / Receives completions")
+
+@enduml 

@@ -1,0 +1,85 @@
+@startuml C4_Keep_Component_ML
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+' Note: Components directly map to source code files:
+' - AI Routes: keep/api/routes/ai.py
+' - Incident AI Routes: keep/api/routes/incidents.py (/ai/suggest endpoint)
+' - AI Suggestion BL: keep/api/bl/ai_suggestion_bl.py
+' - External AI models: keep/api/models/db/ai_external.py
+' - AI suggestions: keep/api/models/db/ai_suggestion.py
+
+title Component diagram for Keep AIOps Platform - ML-Based Anomaly Detection Focus
+
+Container_Boundary(api, "Keep API") {
+    ' API Routes
+    Component(aiRoutes, "AI Routes", "FastAPI Routers\nkeep/api/routes/ai.py", "API endpoints for AI models")
+    Component(incidentRoutes, "Incident AI Routes", "FastAPI Routers\nkeep/api/routes/incidents.py", "AI-powered incident endpoints\n/ai/suggest, /ai/{suggestion_id}/commit")
+    
+    ' ML Core Components
+    Component(aiSuggestionBL, "AI Suggestion Business Logic", "Python\nkeep/api/bl/ai_suggestion_bl.py", "Core ML suggestion functionality\nAISuggestionBl class")
+    Component(externalAIManager, "External AI Manager", "Python\nkeep/api/models/ai_external.py", "Manages external AI models\nExternalAI, ExternalAIConfigAndMetadata")
+    Component(transformerCorrelation, "Transformer Correlation", "External Service\nexternal_ai_transformers", "Alert correlation using transformer models")
+    
+    ' Incident Components
+    Component(incidentsBL, "Incidents Business Logic", "Python\nkeep/api/bl/incidents_bl.py", "Core incident management\nIncidentBl class")
+    Component(suggestionProcessor, "Suggestion Processor", "Python\nkeep/api/bl/ai_suggestion_bl.py", "Processes AI suggestions\n_process_incidents() method")
+    
+    ' External AI Integration
+    Component(openAIClient, "OpenAI Client", "Python\nOpenAI in ai_suggestion_bl.py", "Client for OpenAI services")
+    Component(featureExtraction, "Feature Extraction", "Python\n_prepare_prompts() in ai_suggestion_bl.py", "Extracts features from alerts for ML models")
+    Component(aiEvaluation, "AI Evaluation", "Python", "Evaluates model performance")
+    
+    ' Data Management
+    Component(aiDBAccess, "AI Database Access", "SQLModel\nget_suggestion_by_input(), add_suggestion()", "Stores and retrieves AI models and suggestions")
+    Component(modelStorageManager, "Model Storage Manager", "Python", "Manages trained models")
+    Component(feedbackManager, "Feedback Manager", "Python\nadd_feedback() in ai_suggestion_bl.py", "Manages user feedback for model improvement")
+}
+
+' External containers
+Container(webApp, "Keep UI", "React, Next.js", "Frontend application")
+Container(database, "Database", "PostgreSQL", "Stores alerts, incidents, and ML data")
+Container(wsServer, "WebSocket Server", "Soketi", "Real-time updates")
+Container(openAI, "OpenAI Service", "External API", "Provides LLM capabilities")
+Container(aiService, "External AI Service", "ML Training Service", "Transformer-based alert correlation")
+
+' Frontend flows
+Rel(webApp, incidentRoutes, "Requests AI incident suggestions\ncreate_with_ai()", "HTTPS/JSON")
+Rel(webApp, aiRoutes, "Manages AI settings\nget_stats(), update_settings()", "HTTPS/JSON")
+
+' AI Suggestion Flow
+Rel(incidentRoutes, aiSuggestionBL, "Processes AI suggestion requests\nsuggest_incidents(), commit_incidents()", "Function call")
+Rel(aiSuggestionBL, aiDBAccess, "Stores and retrieves suggestions\nget_suggestion_by_input(), add_suggestion()", "SQL")
+Rel(aiSuggestionBL, openAIClient, "Makes completion requests\n_get_ai_completion()", "Function call")
+Rel(aiSuggestionBL, externalAIManager, "Manages external AI models", "Function call")
+Rel(aiSuggestionBL, suggestionProcessor, "Processes raw suggestions\n_process_incidents()", "Function call")
+Rel(aiSuggestionBL, featureExtraction, "Extracts features from alerts\n_prepare_prompts()", "Function call")
+Rel(openAIClient, openAI, "Makes API requests", "HTTPS/JSON")
+
+' External AI Integration
+Rel(externalAIManager, transformerCorrelation, "Configures and uses\nremind_about_the_client()", "Function call")
+Rel(transformerCorrelation, aiService, "Makes API requests", "HTTPS/JSON")
+Rel(aiService, database, "Fetches training data", "HTTPS/JSON")
+
+' Model Management
+Rel(aiRoutes, externalAIManager, "Updates AI settings\nupdate_settings()", "Function call")
+Rel(externalAIManager, aiDBAccess, "Stores AI configs\nget_or_create_external_ai_settings()", "SQL")
+Rel(aiEvaluation, modelStorageManager, "Evaluates model performance", "Function call")
+Rel(modelStorageManager, aiDBAccess, "Stores model metadata", "SQL")
+
+' Feedback Flow
+Rel(incidentRoutes, feedbackManager, "Submits user feedback\ncommit_with_ai()", "Function call")
+Rel(feedbackManager, aiDBAccess, "Stores feedback\nadd_feedback()", "SQL")
+Rel(aiSuggestionBL, feedbackManager, "Uses feedback for improvement", "Function call")
+
+' Incident Creation from AI
+Rel(suggestionProcessor, incidentsBL, "Creates incidents from suggestions\ncreate_incident()", "Function call")
+Rel(incidentsBL, aiDBAccess, "Updates AI suggestion status", "SQL")
+Rel(incidentsBL, wsServer, "Publishes updates", "WebSocket")
+Rel(wsServer, webApp, "Pushes real-time updates", "WebSocket")
+
+' Database Interactions
+Rel(aiDBAccess, database, "Stores and retrieves data", "SQL")
+
+@enduml 

@@ -1,0 +1,173 @@
+@startuml Provider_Class_Diagram
+
+title Keep AIOps Platform - Provider Integration System
+
+!theme plain
+skinparam linetype ortho
+skinparam ClassBackgroundColor WhiteSmoke
+skinparam ClassBorderColor Black
+skinparam ClassFontColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' Core Provider Classes
+interface Provider {
+  +provider_id: str
+  +provider_type: str
+  +connect()
+  +validate_config(): bool
+  +test_connection(): bool
+  +dispose()
+}
+
+class ProviderFactory {
+  +{static} get_provider(provider_type, provider_id, provider_config): Provider
+  +{static} register_provider(provider_class)
+  +{static} unregister_provider(provider_type)
+}
+
+class BaseProvider {
+  #provider_id: str
+  #provider_type: str
+  #provider_config: dict
+  #logger: Logger
+  +connect()
+  +validate_config(): bool
+  +test_connection(): bool
+  +dispose()
+}
+
+' Provider Types
+class AlertProvider {
+  +pull_alerts(params): List[AlertDto]
+  +push_alert(alert): bool
+  +update_alert(alert): bool
+}
+
+class MetricsProvider {
+  +query_metrics(query, start_time, end_time): List[MetricDto]
+  +get_metric_names(): List[str]
+  +get_metric_labels(metric_name): Dict[str, List[str]]
+}
+
+class LogsProvider {
+  +query_logs(query, start_time, end_time): List[LogDto]
+  +get_log_sources(): List[str]
+  +get_log_fields(): List[str]
+}
+
+class AIProvider {
+  +get_completion(prompt, model, options): str
+  +get_embedding(text, model): List[float]
+  +chat_completion(messages, model, options): str
+}
+
+class NotificationProvider {
+  +send_notification(notification): bool
+  +get_channels(): List[str]
+}
+
+class TicketingProvider {
+  +create_ticket(ticket): str
+  +update_ticket(ticket_id, updates): bool
+  +get_ticket(ticket_id): TicketDto
+  +search_tickets(query): List[TicketDto]
+}
+
+' Specific Providers (examples)
+class DatadogProvider {
+  +api_key: str
+  +app_key: str
+  +base_url: str
+}
+
+class ElasticProvider {
+  +hosts: List[str]
+  +api_key: str
+  +username: str
+  +password: str
+}
+
+class OpenAIProvider {
+  +api_key: str
+  +organization_id: str
+}
+
+class SlackProvider {
+  +token: str
+  +channel: str
+}
+
+class JiraProvider {
+  +url: str
+  +username: str
+  +api_token: str
+  +project_key: str
+}
+
+' Provider Configuration and Storage
+class ProviderConfig {
+  +id: str
+  +name: str
+  +description: str
+  +provider_type: str
+  +config: Dict
+  +created_at: datetime
+  +updated_at: datetime
+  +is_enabled: bool
+  +owner: str
+}
+
+class ProviderStore {
+  -tenant_id: str
+  -session: Session
+  +add_provider(provider_config): str
+  +get_provider(provider_id): ProviderConfig
+  +update_provider(provider_id, updates): ProviderConfig
+  +delete_provider(provider_id): bool
+  +get_all_providers(): List[ProviderConfig]
+  +get_providers_by_type(provider_type): List[ProviderConfig]
+}
+
+' Relationships
+Provider <|.. BaseProvider
+BaseProvider <|-- AlertProvider
+BaseProvider <|-- MetricsProvider
+BaseProvider <|-- LogsProvider
+BaseProvider <|-- AIProvider
+BaseProvider <|-- NotificationProvider
+BaseProvider <|-- TicketingProvider
+
+AlertProvider <|-- DatadogProvider
+LogsProvider <|-- ElasticProvider
+AIProvider <|-- OpenAIProvider
+NotificationProvider <|-- SlackProvider
+TicketingProvider <|-- JiraProvider
+
+ProviderFactory ..> Provider : creates
+ProviderFactory ..> ProviderStore : uses
+
+ProviderStore "1" *-- "*" ProviderConfig : manages
+
+note right of Provider
+  Generic interface for all 
+  external system integrations
+end note
+
+note right of BaseProvider
+  Common functionality for
+  all provider implementations
+end note
+
+note bottom of ProviderFactory
+  Creates appropriate provider 
+  instances based on type
+  and configuration
+end note
+
+note bottom of ProviderStore
+  Manages storage and retrieval
+  of provider configurations
+end note
+
+@enduml 

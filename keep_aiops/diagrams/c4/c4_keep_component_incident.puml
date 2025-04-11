@@ -1,0 +1,82 @@
+@startuml C4_Keep_Component_Incident
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for Keep AIOps Platform - Incident Management Focus
+
+Container_Boundary(api, "Keep API") {
+    ' API Routes
+    Component(incidentRoutes, "Incident Routes", "FastAPI Routers", "API endpoints for incident management")
+    Component(alertRoutes, "Alert Routes", "FastAPI Routers", "API endpoints for alert management")
+    Component(reportRoutes, "Report Routes", "FastAPI Routers", "API endpoints for incident reporting")
+    
+    ' Incident Management Core Components
+    Component(incidentsBL, "Incidents Business Logic", "Python", "Core incident management functionality")
+    Component(reportsBL, "Incident Reports Business Logic", "Python", "Generates incident reports and analytics")
+    Component(incidentCreator, "Incident Creator", "Python", "Creates incidents from correlated alerts")
+    
+    ' Alert Management Components
+    Component(alertsBL, "Alerts Business Logic", "Python", "Manages alert lifecycle")
+    Component(enrichmentsBL, "Enrichments Business Logic", "Python", "Manages alert enrichments")
+    
+    ' Cross-cutting Components
+    Component(workflowManager, "Workflow Manager", "Python", "Manages workflow execution")
+    Component(authMiddleware, "Auth Middleware", "Python", "Handles authentication and authorization")
+    Component(notificationManager, "Notification Manager", "Python", "Manages notifications for incidents")
+    
+    ' Data Access
+    Component(dbAccess, "Database Access Layer", "SQLModel/SQLAlchemy", "Handles database operations")
+}
+
+' External containers
+Container(webApp, "Keep UI", "React, Next.js", "Frontend application")
+Container(database, "Database", "PostgreSQL", "Stores incidents, alerts, and audit logs")
+Container(wsServer, "WebSocket Server", "Soketi", "Real-time updates")
+Container(redis, "Redis Queue", "Redis + ARQ", "Message queue for async processing")
+
+' External systems
+System_Ext(monitoringTools, "Monitoring Tools", "Alert sources")
+System_Ext(chatSystems, "Chat Systems", "Slack, MS Teams, etc.")
+System_Ext(ticketingSystems, "Ticketing Systems", "JIRA, ServiceNow, etc.")
+
+' Frontend to API Routes
+Rel(webApp, incidentRoutes, "Manages incidents", "HTTPS/JSON")
+Rel(webApp, reportRoutes, "Retrieves incident reports", "HTTPS/JSON")
+
+' Incident Flow
+Rel(incidentRoutes, incidentsBL, "Processes incident operations", "Function call")
+Rel(incidentsBL, dbAccess, "Stores and retrieves incident data", "SQL")
+Rel(incidentsBL, workflowManager, "Triggers workflows on incident events", "Function call")
+Rel(incidentsBL, wsServer, "Publishes incident updates", "WebSocket")
+Rel(wsServer, webApp, "Pushes real-time updates", "WebSocket")
+
+' Alert to Incident Flow
+Rel(alertRoutes, alertsBL, "Processes alert operations", "Function call")
+Rel(alertsBL, enrichmentsBL, "Enriches alerts", "Function call")
+Rel(enrichmentsBL, dbAccess, "Updates alert data", "SQL")
+Rel(alertsBL, incidentsBL, "Associates alerts with incidents", "Function call")
+
+' Reporting Flow
+Rel(reportRoutes, reportsBL, "Generates incident reports", "Function call")
+Rel(reportsBL, dbAccess, "Retrieves incident data for reports", "SQL")
+
+' External Integrations
+Rel(incidentsBL, chatSystems, "Sends notifications", "API")
+Rel(incidentsBL, ticketingSystems, "Creates and updates tickets", "API")
+Rel(workflowManager, chatSystems, "Sends workflow notifications", "API")
+Rel(workflowManager, ticketingSystems, "Updates tickets based on workflows", "API")
+
+' Database Interactions
+Rel(dbAccess, database, "Stores and retrieves data", "SQL")
+
+' Authentication
+Rel(incidentRoutes, authMiddleware, "Authenticates users", "Function call")
+Rel(reportRoutes, authMiddleware, "Authenticates users", "Function call")
+
+' Notification Flow
+Rel(incidentsBL, notificationManager, "Sends incident notifications", "Function call")
+Rel(notificationManager, wsServer, "Pushes notifications", "WebSocket")
+Rel(notificationManager, redis, "Queues notifications", "Redis")
+
+@enduml 

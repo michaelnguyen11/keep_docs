@@ -1,0 +1,192 @@
+@startuml AI_Enrichment_Sequence
+
+title Keep AIOps Platform - AI Enrichment Sequence
+
+!theme plain
+skinparam SequenceBoxBackgroundColor WhiteSmoke
+skinparam SequenceBoxBorderColor Black
+skinparam ParticipantBackgroundColor WhiteSmoke
+skinparam ParticipantBorderColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+actor "User or System" as Trigger
+participant "API\nEndpoint" as API
+participant "EnrichmentsBL" as EnrichmentsBL
+participant "AIManager" as AIManager
+participant "ProviderFactory" as ProviderFactory
+participant "AIProvider" as AIProvider
+participant "External AI\nService" as ExternalAI
+participant "AlertsBL/IncidentsBL" as CoreBL
+participant "Database" as DB
+participant "WebSocket\nServer" as WS
+participant "User Interface" as UI
+
+== Enrichment Request ==
+
+alt Manual Enrichment
+  Trigger -> API: POST /api/alerts/{fingerprint}/enrich
+  activate API
+  API -> EnrichmentsBL: enrich_alert(fingerprint, enrichment_type)
+  activate EnrichmentsBL
+else Automatic Enrichment
+  CoreBL -> EnrichmentsBL: enrich_alert(alert_dto, enrichment_type)
+  activate EnrichmentsBL
+end alt
+
+EnrichmentsBL -> DB: Get alert details
+activate DB
+DB --> EnrichmentsBL: Alert data
+deactivate DB
+
+alt Context Enrichment
+  EnrichmentsBL -> EnrichmentsBL: enrich_with_context(alert_dto)
+  activate EnrichmentsBL
+  EnrichmentsBL -> DB: Get related data (e.g., environment, service)
+  activate DB
+  DB --> EnrichmentsBL: Related context data
+  deactivate DB
+  EnrichmentsBL --> EnrichmentsBL: Context-enriched alert
+  deactivate EnrichmentsBL
+end alt
+
+== AI Provider Selection ==
+
+EnrichmentsBL -> AIManager: get_ai_provider(enrichment_type)
+activate AIManager
+AIManager -> ProviderFactory: get_provider("ai", provider_id, config)
+activate ProviderFactory
+ProviderFactory --> AIManager: AI Provider instance
+deactivate ProviderFactory
+AIManager --> EnrichmentsBL: AI Provider ready
+deactivate AIManager
+
+== AI Request Preparation ==
+
+EnrichmentsBL -> EnrichmentsBL: prepare_ai_prompt(alert_dto, enrichment_type)
+activate EnrichmentsBL
+note right of EnrichmentsBL
+  Formats alert data into appropriate
+  prompt based on enrichment type
+  (e.g., summary, root cause, severity)
+end note
+EnrichmentsBL --> EnrichmentsBL: Formatted prompt
+deactivate EnrichmentsBL
+
+== AI Service Interaction ==
+
+EnrichmentsBL -> AIProvider: get_completion(prompt, model, options)
+activate AIProvider
+AIProvider -> ExternalAI: POST /completions
+activate ExternalAI
+note right of ExternalAI
+  Send request to LLM service
+  (OpenAI, Anthropic, etc.)
+end note
+ExternalAI --> AIProvider: AI response
+deactivate ExternalAI
+AIProvider --> EnrichmentsBL: Completion result
+deactivate AIProvider
+
+== AI Response Processing ==
+
+EnrichmentsBL -> EnrichmentsBL: process_ai_response(ai_response)
+activate EnrichmentsBL
+note right of EnrichmentsBL
+  Parse and validate AI response
+  Format according to expected schema
+end note
+EnrichmentsBL --> EnrichmentsBL: Processed enrichment data
+deactivate EnrichmentsBL
+
+== Store Enrichment Results ==
+
+EnrichmentsBL -> CoreBL: update_with_enrichment(fingerprint/id, enrichment_data)
+activate CoreBL
+CoreBL -> DB: Store enrichment data
+activate DB
+DB --> CoreBL: Stored confirmation
+deactivate DB
+CoreBL -> WS: Publish enrichment update
+activate WS
+WS --> UI: Real-time update
+deactivate WS
+CoreBL --> EnrichmentsBL: Update confirmation
+deactivate CoreBL
+
+EnrichmentsBL --> API: Enrichment results
+deactivate EnrichmentsBL
+
+API --> Trigger: HTTP Response
+deactivate API
+
+== Multiple Enrichment Types Example ==
+
+Trigger -> API: POST /api/incidents/{id}/generate-summary
+activate API
+API -> EnrichmentsBL: generate_incident_summary(incident_id)
+activate EnrichmentsBL
+
+EnrichmentsBL -> DB: Get incident with related alerts
+activate DB
+DB --> EnrichmentsBL: Incident data with alerts
+deactivate DB
+
+EnrichmentsBL -> AIManager: get_ai_provider("summary")
+activate AIManager
+AIManager --> EnrichmentsBL: AI Provider for summary
+deactivate AIManager
+
+EnrichmentsBL -> EnrichmentsBL: prepare_summary_prompt(incident_data)
+activate EnrichmentsBL
+EnrichmentsBL --> EnrichmentsBL: Summary prompt
+deactivate EnrichmentsBL
+
+EnrichmentsBL -> AIProvider: chat_completion(messages, model, options)
+activate AIProvider
+AIProvider -> ExternalAI: POST /chat/completions
+activate ExternalAI
+ExternalAI --> AIProvider: Summary text
+deactivate ExternalAI
+AIProvider --> EnrichmentsBL: Summary result
+deactivate AIProvider
+
+EnrichmentsBL -> AIManager: get_ai_provider("root_cause")
+activate AIManager
+AIManager --> EnrichmentsBL: AI Provider for root cause
+deactivate AIManager
+
+EnrichmentsBL -> EnrichmentsBL: prepare_root_cause_prompt(incident_data)
+activate EnrichmentsBL
+EnrichmentsBL --> EnrichmentsBL: Root cause prompt
+deactivate EnrichmentsBL
+
+EnrichmentsBL -> AIProvider: chat_completion(messages, model, options)
+activate AIProvider
+AIProvider -> ExternalAI: POST /chat/completions
+activate ExternalAI
+ExternalAI --> AIProvider: Root cause analysis
+deactivate ExternalAI
+AIProvider --> EnrichmentsBL: Root cause result
+deactivate AIProvider
+
+EnrichmentsBL -> CoreBL: update_incident_with_enrichments(incident_id, enrichments)
+activate CoreBL
+CoreBL -> DB: Store enrichments
+activate DB
+DB --> CoreBL: Stored confirmation
+deactivate DB
+CoreBL -> WS: Publish incident update
+activate WS
+WS --> UI: Real-time update
+deactivate WS
+CoreBL --> EnrichmentsBL: Update confirmation
+deactivate CoreBL
+
+EnrichmentsBL --> API: Enrichment complete
+deactivate EnrichmentsBL
+
+API --> Trigger: HTTP Response
+deactivate API
+
+@enduml 

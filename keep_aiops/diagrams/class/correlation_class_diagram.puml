@@ -1,0 +1,185 @@
+@startuml correlation_class_diagram
+!theme plain
+skinparam linetype ortho
+
+' Rule related classes
+class Rule {
+  id: UUID
+  tenant_id: str
+  name: str
+  definition: dict
+  definition_cel: str
+  timeframe: int
+  timeunit: str
+  created_by: str
+  creation_time: datetime
+  updated_by: str
+  update_time: datetime
+  grouping_criteria: list
+  group_description: str
+  item_description: str
+  require_approve: bool
+  resolve_on: str
+  create_on: str
+  incident_name_template: str
+  incident_prefix: str
+  multi_level: bool
+  multi_level_property_name: str
+}
+
+enum ResolveOn {
+  FIRST
+  LAST
+  ALL
+  NEVER
+}
+
+enum CreateIncidentOn {
+  ANY
+  ALL
+}
+
+' Alert classes
+class AlertDto {
+  id: str
+  fingerprint: str
+  title: str
+  description: str
+  status: AlertStatus
+  severity: AlertSeverity
+  source: List[str]
+  source_link: str
+  metadata: Dict
+  lastReceived: str
+  event_id: str
+}
+
+enum AlertStatus {
+  NEW
+  ACKNOWLEDGED
+  RESOLVED
+  CLOSED
+  SNOOZED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+' Incident classes
+class IncidentDto {
+  incident_id: str
+  title: str
+  description: str
+  status: IncidentStatus
+  severity: IncidentSeverity
+  created_at: datetime
+  updated_at: datetime
+  resolved_at: datetime
+  alerts: List[AlertDto]
+  rule_id: UUID
+  rule_fingerprint: str
+  is_candidate: bool
+}
+
+enum IncidentStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+' Rules Engine classes
+class RulesEngine {
+  tenant_id: str
+  logger: Logger
+  env: celpy.Environment
+  
+  run_rules(events: List[AlertDto], session: Session): List[IncidentDto]
+  _run_cel_rules(events: List[AlertDto], session: Session): List[IncidentDto]
+  _check_if_rule_apply(rule: Rule, event: AlertDto): List[str]
+  _extract_subrules(cel_expression: str): List[str]
+  _calc_rule_fingerprint(event: AlertDto, rule: Rule): List[List[str]]
+  _get_or_create_incident(rule: Rule, rule_fingerprint: str, session: Session, event: AlertDto): Tuple[Incident, bool]
+  _process_event_for_history_based_rule(incident: Incident, rule: Rule, session: Session): Incident
+  get_value_from_event(event: AlertDto, var: str): str
+  get_variables(incident_name_template: str): List[str]
+  filter_alerts(alerts: List[AlertDto], cel: str, alerts_activation: List): List[AlertDto]
+  get_alerts_activation(alerts: List[AlertDto]): List
+  {static} sanitize_cel_payload(payload: Dict): Dict
+  {static} send_workflow_event(tenant_id: str, session: Session, incident_dto: IncidentDto, event_type: str): None
+}
+
+class CELUtils {
+  preprocess_cel_expression(cel_expression: str): str
+}
+
+' Database Access classes
+class DatabaseAccess {
+  get_rules_db(tenant_id: str): List[Rule]
+  create_rule_db(tenant_id: str, name: str, ...): Rule
+  update_rule_db(rule_id: UUID, ...): Rule
+  delete_rule_db(rule_id: UUID): None
+  create_incident_for_grouping_rule(tenant_id: str, rule: Rule, fingerprint: str, alert: AlertDto): Incident
+  get_incident_for_grouping_rule(tenant_id: str, rule: Rule, fingerprint: str, expired: bool): Tuple[Incident, bool]
+  assign_alert_to_incident(fingerprint: str, incident: Incident): Incident
+  enrich_incidents_with_alerts(tenant_id: str, incidents: List[Incident], session: Session): None
+  is_all_alerts_in_status(fingerprints: List[str], status: AlertStatus, session: Session): bool
+  get_last_incidents(tenant_id: str, with_alerts: bool, is_candidate: bool): Tuple[List[Incident], int]
+  set_last_alert(tenant_id: str, alert: Alert, session: Session): None
+}
+
+' Business Logic classes
+class IncidentBL {
+  tenant_id: str
+  session: Session
+  
+  get_incidents(query: Dict): List[IncidentDto]
+  get_incident(incident_id: str): IncidentDto
+  create_incident(incident: IncidentDto): str
+  update_incident(incident_id: str, data: Dict): IncidentDto
+  resolve_incident(incident_id: str): IncidentDto
+  close_incident(incident_id: str): IncidentDto
+  add_alert_to_incident(incident_id: str, alert_id: str): IncidentDto
+  remove_alert_from_incident(incident_id: str, alert_id: str): IncidentDto
+  resolve_incident_if_require(incident: Incident): Incident
+}
+
+' Relationships
+Rule "1" -- "1" ResolveOn: "uses"
+Rule "1" -- "1" CreateIncidentOn: "uses"
+
+AlertDto "1" -- "1" AlertStatus: "has"
+AlertDto "1" -- "1" AlertSeverity: "has"
+
+IncidentDto "1" -- "1" IncidentStatus: "has"
+IncidentDto "1" -- "1" IncidentSeverity: "has"
+IncidentDto "1" -- "*" AlertDto: "contains"
+IncidentDto "*" -- "1" Rule: "created by"
+
+RulesEngine "*" -- "*" AlertDto: "processes"
+RulesEngine "*" -- "*" Rule: "applies"
+RulesEngine "*" -- "*" IncidentDto: "creates"
+RulesEngine -- CELUtils: "uses"
+
+DatabaseAccess -- Rule: "stores & retrieves"
+DatabaseAccess -- IncidentDto: "stores & retrieves"
+DatabaseAccess -- AlertDto: "stores & retrieves"
+
+IncidentBL -- IncidentDto: "manages"
+IncidentBL -- AlertDto: "relates to incidents"
+
+RulesEngine -- DatabaseAccess: "uses"
+RulesEngine -- IncidentBL: "uses"
+
+@enduml 

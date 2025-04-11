@@ -1,0 +1,173 @@
+@startuml Alert_Incident_Class_Diagram
+
+title Keep AIOps Platform - Alert and Incident Classes
+
+!theme plain
+skinparam linetype ortho
+skinparam ClassBackgroundColor WhiteSmoke
+skinparam ClassBorderColor Black
+skinparam ClassFontColor Black
+skinparam NoteBackgroundColor LightYellow
+skinparam NoteBorderColor Black
+
+' Alert-related classes
+class AlertDto {
+  +id: str
+  +name: str
+  +status: AlertStatus
+  +severity: AlertSeverity
+  +lastReceived: str
+  +fingerprint: str
+  +environment: str
+  +service: str
+  +source: list[str]
+  +message: str
+  +description: str
+  +url: AnyHttpUrl
+  +labels: dict
+  +providerId: str
+  +providerType: str
+  +enriched_fields: list
+  +incident: str
+  +__str__(): str
+  +__eq__(other): bool
+  +validate_fingerprint()
+  +validate_url()
+  +validate_last_received()
+}
+
+enum AlertStatus {
+  FIRING
+  RESOLVED
+  ACKNOWLEDGED
+  SUPPRESSED
+  PENDING
+}
+
+class AlertSeverity {
+  +CRITICAL = ("critical", 5)
+  +HIGH = ("high", 4)
+  +WARNING = ("warning", 3)
+  +INFO = ("info", 2)
+  +LOW = ("low", 1)
+}
+
+class DeduplicationRuleDto {
+  +id: str
+  +name: str
+  +description: str
+  +provider_type: str
+  +provider_id: str
+  +fingerprint_fields: list[str]
+  +full_deduplication: bool
+  +ignore_fields: list[str]
+  +enabled: bool
+}
+
+' Incident-related classes
+class IncidentDto {
+  +id: str
+  +name: str
+  +description: str
+  +severity: IncidentSeverity
+  +status: IncidentStatus
+  +creation_time: str
+  +last_updated: str
+  +alerts_count: int
+  +environment: str
+  +service: str
+  +owner: str
+  +source: list[str]
+  +labels: dict
+  +enrichments: dict
+  +from_db_incident(incident): IncidentDto
+}
+
+enum IncidentStatus {
+  OPEN
+  RESOLVED
+  ACKNOWLEDGED
+  INVESTIGATING
+}
+
+class IncidentSeverity {
+  +CRITICAL = ("critical", 5)
+  +HIGH = ("high", 4)
+  +WARNING = ("warning", 3)
+  +INFO = ("info", 2)
+  +LOW = ("low", 1)
+}
+
+' Business Logic Classes
+class AlertsBL {
+  -tenant_id: str
+  -session: Session
+  -pusher_client: Pusher
+  +get_alert(fingerprint): AlertDto
+  +create_alert(alert_dto): AlertDto
+  +get_alerts(query_params): list[AlertDto]
+  +update_alert(fingerprint, update_dto): AlertDto
+  +delete_alert(fingerprint): bool
+  +enrich_alert(fingerprint, enrichments): AlertDto
+  +deduplicate_alert(alert_dto): AlertDto
+}
+
+class IncidentsBL {
+  -tenant_id: str
+  -session: Session
+  -pusher_client: Pusher
+  -user: str
+  +create_incident(incident_dto): IncidentDto
+  +add_alerts_to_incident(incident_id, alert_fingerprints)
+  +delete_alerts_from_incident(incident_id, alert_fingerprints)
+  +update_incident(incident_id, updated_dto): IncidentDto
+  +delete_incident(incident_id)
+  +update_severity(incident_id, severity): IncidentDto
+  +change_status(incident_id, new_status): IncidentDto
+}
+
+class EnrichmentsBL {
+  -tenant_id: str
+  -session: Session
+  +enrich_alert(alert_dto, enrichment_type): dict
+  +enrich_incident(incident_dto, enrichment_type): dict
+  +get_enrichment_providers(): list[dict]
+  +perform_ai_enrichment(data, enrichment_type): dict
+}
+
+' Relationships
+AlertDto --> AlertStatus
+AlertDto --> AlertSeverity
+IncidentDto --> IncidentStatus
+IncidentDto --> IncidentSeverity
+
+AlertsBL "1" --> "*" AlertDto : manages
+IncidentsBL "1" --> "*" IncidentDto : manages
+AlertsBL --> DeduplicationRuleDto : uses
+EnrichmentsBL --> AlertDto : enriches
+EnrichmentsBL --> IncidentDto : enriches
+
+note right of AlertsBL
+  Handles alert lifecycle:
+  - Creation
+  - Deduplication
+  - Enrichment
+  - Status management
+end note
+
+note right of IncidentsBL
+  Handles incident lifecycle:
+  - Creation
+  - Alert association
+  - Status management
+  - Severity updates
+end note
+
+note right of EnrichmentsBL
+  Provides additional context using:
+  - Internal data
+  - External sources
+  - AI-powered insights
+end note
+
+@enduml 
